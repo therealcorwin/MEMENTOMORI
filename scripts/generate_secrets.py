@@ -56,3 +56,4 @@ def generate_secrets() -> None:
 
 if __name__ == "__main__":
     generate_secrets()
+
