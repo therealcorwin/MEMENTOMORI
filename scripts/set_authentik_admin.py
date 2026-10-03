@@ -3,15 +3,18 @@ Met à jour le mot de passe de l'administrateur akadmin dans Authentik
 en utilisant la valeur définie dans le fichier .env.
 """
 
+from pathlib import Path
 import subprocess
 from dotenv import dotenv_values
 
-config = dotenv_values(".env")
+root_dir = Path(__file__).resolve().parent.parent
+env_path = root_dir / ".env"
+config = dotenv_values(env_path)
 admin_pwd = config.get("AUTHENTIK_ADMIN_PASSWORD")
 
 if not admin_pwd:
-    print("Erreur: AUTHENTIK_ADMIN_PASSWORD non trouvé dans .env")
-    exit(1)
+    print(f"Erreur: AUTHENTIK_ADMIN_PASSWORD non trouvé dans {env_path}")
+    raise SystemExit(1)
 
 code = f"""
 from authentik.core.models import User

@@ -1,9 +1,6 @@
 # ==============================================================================
-# docker-compose.dev.yml - Environnement de développement local (Sprint 1+)
-# ==============================================================================
-# Usage :
-#   docker compose -f docker-compose.dev.yml up -d knowledge-db knowledge-redis
-#   docker compose -f docker-compose.dev.yml up -d (lance le socle dev complet)
+# D:\Dev\Docker\MEMENTOMORI\docker-compose.yml
+# Architecture complète MEMENTOMORI avec stockage centralisé par conteneur
 # ==============================================================================
 
 services:
@@ -13,15 +10,14 @@ services:
     container_name: mementomori-knowledge-db
     restart: unless-stopped
     ports:
-      # Expose sur 5433 pour éviter tout conflit éventuel avec un PostgreSQL local existant
       - "5433:5432"
     environment:
       POSTGRES_DB: knowledge
       POSTGRES_USER: knowledge_app
       POSTGRES_PASSWORD: ${KNOWLEDGE_DB_PASSWORD:-dev_knowledge_password}
     volumes:
-      - dev_knowledge_pgdata:/var/lib/postgresql/data
-      - ./sql/init_knowledge.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./knowledge-db/bdd:/var/lib/postgresql/data
+      - ./knowledge-db/config/01_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U knowledge_app -d knowledge"]
       interval: 5s
@@ -49,11 +45,11 @@ services:
       timeout: 3s
       retries: 3
     volumes:
-      - dev_knowledge_redis_data:/data
+      - ./knowledge-redis/data:/data
     networks:
       - dev_network
 
-  # ========== AUTHENTIK (Socle Auth Dev) ==========
+  # ========== AUTHENTIK (Socle Auth) ==========
   authentik-db:
     image: postgres:16-alpine
     container_name: mementomori-authentik-db
@@ -63,7 +59,7 @@ services:
       POSTGRES_USER: authentik
       POSTGRES_PASSWORD: ${AUTHENTIK_DB_PASSWORD:-dev_authentik_db_password}
     volumes:
-      - dev_authentik_pgdata:/var/lib/postgresql/data
+      - ./authentik-db/bdd:/var/lib/postgresql/data
     networks:
       - dev_network
       - shared_network
@@ -73,7 +69,7 @@ services:
     container_name: mementomori-authentik-redis
     restart: unless-stopped
     volumes:
-      - dev_authentik_redis_data:/data
+      - ./authentik-redis/data:/data
     networks:
       - dev_network
 
@@ -92,6 +88,8 @@ services:
     ports:
       - "9000:9000"
       - "9444:9443"
+    volumes:
+      - ./authentik-server/cert:/certs
     depends_on:
       - authentik-db
       - authentik-redis
@@ -110,6 +108,8 @@ services:
       AUTHENTIK_POSTGRESQL__USER: authentik
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_DB_PASSWORD:-dev_authentik_db_password}
+    volumes:
+      - ./authentik-server/cert:/certs
     depends_on:
       - authentik-db
       - authentik-redis
@@ -122,10 +122,4 @@ networks:
   shared_network:
     name: Shared_Network
     external: true
-
-volumes:
-  dev_knowledge_pgdata:
-  dev_knowledge_redis_data:
-  dev_authentik_pgdata:
-  dev_authentik_redis_data:
 
