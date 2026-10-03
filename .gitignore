@@ -1,0 +1,29 @@
+# Python bytecode and caches
+__pycache__/
+*.py[codz]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local environments and secrets
+.venv/
+.env
+.env.*
+!.env.example
+
+# Editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.graphify-out
+graphify-out/
