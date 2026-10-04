@@ -98,20 +98,48 @@ async def hybrid_search(
     clean_q = query.strip()
     fts_hits = []
     if clean_q:
-        fts_query = func.plainto_tsquery("french", clean_q)
-        fts_stmt = (
-            base_join.add_columns(
-                func.ts_rank(Fragment.search_vector, fts_query).label("text_rank")
+        import re
+        stop_words = {
+            "quel", "quelle", "quels", "quelles", "dans", "pour", "cette", "sont",
+            "avec", "est", "les", "des", "une", "par", "sur", "ont", "ete", "qui",
+            "sous", "dont", "chez", "nous", "vous", "leur", "plus", "tout", "tous"
+        }
+        tokens = re.findall(r'\b[a-zA-Z0-9_\u00C0-\u017F]{3,}\b', clean_q.lower())
+        meaningful = [t for t in tokens if t not in stop_words]
+
+        try:
+            if meaningful:
+                or_expr = " | ".join(meaningful)
+                fts_query = func.to_tsquery("french", or_expr)
+            else:
+                fts_query = func.plainto_tsquery("french", clean_q)
+
+            fts_stmt = (
+                base_join.add_columns(
+                    func.ts_rank(Fragment.search_vector, fts_query).label("text_rank")
+                )
+                .where(Fragment.search_vector.op("@@")(fts_query))
+                .order_by(func.ts_rank(Fragment.search_vector, fts_query).desc())
+                .limit(20)
             )
-            .where(Fragment.search_vector.op("@@")(fts_query))
-            .order_by(func.ts_rank(Fragment.search_vector, fts_query).desc())
-            .limit(20)
-        )
-        fts_res = await db.execute(fts_stmt)
-        fts_hits = fts_res.all()
+            fts_res = await db.execute(fts_stmt)
+            fts_hits = fts_res.all()
+        except Exception:
+            # Fallback en cas d'erreur de parsing to_tsquery
+            fb_query = func.plainto_tsquery("french", clean_q)
+            fts_stmt_fb = (
+                base_join.add_columns(
+                    func.ts_rank(Fragment.search_vector, fb_query).label("text_rank")
+                )
+                .where(Fragment.search_vector.op("@@")(fb_query))
+                .order_by(func.ts_rank(Fragment.search_vector, fb_query).desc())
+                .limit(20)
+            )
+            fts_res = await db.execute(fts_stmt_fb)
+            fts_hits = fts_res.all()
 
     # 3. Fusion Reciprocal Rank Fusion (RRF)
-    # Score RRF = 1 / (k + rank_vec) + 1 / (k + rank_text)
+    # Score RRF = 1 / (k + rank_vec) + weight_fts / (k + rank_text)
     scores: dict[uuid.UUID, float] = {}
     details: dict[uuid.UUID, Any] = {}
 
@@ -120,9 +148,10 @@ async def hybrid_search(
         scores[f_id] = scores.get(f_id, 0.0) + (1.0 / (rrf_k + rank))
         details[f_id] = row
 
+    # Les correspondances plein-texte exactes en français reçoivent une pondération renforcée (3.0)
     for rank, row in enumerate(fts_hits, start=1):
         f_id = row.frag_id
-        scores[f_id] = scores.get(f_id, 0.0) + (1.0 / (rrf_k + rank))
+        scores[f_id] = scores.get(f_id, 0.0) + (3.0 / (rrf_k + rank))
         if f_id not in details:
             details[f_id] = row
 

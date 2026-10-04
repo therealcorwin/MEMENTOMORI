@@ -38,6 +38,20 @@ async def fetch_paperless_documents(limit: int = 100) -> List[dict[str, Any]]:
         return data.get("results", [])
 
 
+async def fetch_single_paperless_document(document_id: int) -> Optional[dict[str, Any]]:
+    """Récupère les détails et le contenu OCR d'un document unique depuis Paperless-ngx."""
+    url = f"{settings.PAPERLESS_URL.rstrip('/')}/api/documents/{document_id}/"
+    headers = {"Authorization": f"Token {settings.PAPERLESS_API_TOKEN}"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                return resp.json()
+    except Exception as e:
+        logger.error("paperless_fetch_single_error", error=str(e), doc_id=document_id)
+    return None
+
+
 async def ingest_single_document(
     title: str,
     content: str,

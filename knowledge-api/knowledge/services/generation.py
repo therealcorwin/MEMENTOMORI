@@ -82,6 +82,25 @@ async def generate_grounded_answer(
             "warning": None
         }
 
+    # 1b. Règle stricte §7 : Sans source suffisante -> Jamais d'affirmation non sourcée
+    stop_words = {"quel", "quelle", "quels", "quelles", "dans", "pour", "cette", "sont", "avec", "est-ce", "comment", "combien", "l'immeuble", "immeuble", "copropriete"}
+    query_words = [w.lower().strip("?,.:;'\"") for w in question.split() if len(w) > 3 and w.lower() not in stop_words]
+    all_content = " ".join(f.content.lower() for f in fragments)
+    has_any_keyword = any(w in all_content for w in query_words) if query_words else True
+    max_score = max((f.score for f in fragments), default=0.0)
+
+    if not has_any_keyword and max_score <= 0.025:
+        return {
+            "answer": "Je ne peux pas confirmer cette information : aucun document de la base de connaissances ne contient d'élément relatif à votre question.",
+            "confidence": 0.0,
+            "sources": [],
+            "citations": [],
+            "limits": "Aucun document pertinent accessible pour ce sujet",
+            "model": "system",
+            "provider": "system",
+            "warning": "Question hors du périmètre documentaire disponible"
+        }
+
     # 2. Construction du prompt système
     template = load_answer_prompt_template()
     system_prompt = template.replace("{chunks}", "\n\n".join(chunks_text_blocks))

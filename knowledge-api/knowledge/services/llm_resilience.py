@@ -141,6 +141,25 @@ class OllamaProvider(BaseLLMProvider):
             return answer, data.get("prompt_eval_count", 0), data.get("eval_count", 0)
 
 
+_ollama_available: Optional[bool] = None
+_ollama_last_checked: float = 0.0
+
+async def check_ollama_health(host: str = "http://localhost:11434") -> bool:
+    """Vérifie rapidement si Ollama est actif en local avec mise en cache du statut (60s)."""
+    global _ollama_available, _ollama_last_checked
+    now = time.time()
+    if _ollama_available is not None and (now - _ollama_last_checked) < 60.0:
+        return _ollama_available
+    try:
+        async with httpx.AsyncClient(timeout=0.2) as client:
+            resp = await client.get(f"{host}/api/tags")
+            _ollama_available = (resp.status_code == 200)
+    except Exception:
+        _ollama_available = False
+    _ollama_last_checked = now
+    return _ollama_available
+
+
 async def answer_with_fallback(
     system_prompt: str,
     user_query: str,
@@ -167,7 +186,8 @@ async def answer_with_fallback(
         logger.warning("secret_fragments_detected_bypassing_cloud_llms")
 
     # Provider local Ollama si disponible
-    providers.append((OllamaProvider(), FallbackLevel.LOCAL))
+    if await check_ollama_health():
+        providers.append((OllamaProvider(), FallbackLevel.LOCAL))
 
     for provider, level in providers:
         for attempt in range(1 + max_retries):
@@ -212,13 +232,15 @@ async def answer_with_fallback(
     extraits = []
     for f in fragments[:3]:
         title = getattr(f, "document_title", "Document")
-        content = getattr(f, "content", str(f))[:250].strip()
-        extraits.append(f"- [{title}] : {content}...")
+        content = getattr(f, "content", str(f)).strip()
+        if len(content) > 1000:
+            content = content[:1000] + "..."
+        extraits.append(f"- [{title}] :\n{content}")
 
     degraded_answer = (
         "Le service de génération automatique est momentanément indisponible.\n\n"
-        "Voici les extraits les plus pertinents identifiés dans votre base de connaissances :\n"
-        + "\n".join(extraits)
+        "Voici les extraits les plus pertinents identifiés dans votre base de connaissances :\n\n"
+        + "\n\n".join(extraits)
     )
 
     return LLMResponse(
