@@ -27,14 +27,20 @@ def _generate_mock_embedding(text: str, dim: int = 768) -> List[float]:
     return [v / norm for v in raw_vals]
 
 
-async def generate_embedding(text: str, model: Optional[str] = None) -> List[float]:
+async def generate_embedding(
+    text: str,
+    model: Optional[str] = None,
+    task_type: Optional[str] = None
+) -> List[float]:
     """Génère un vecteur d'embedding de 768 dimensions pour un texte unique."""
-    embeddings = await generate_embeddings([text], model=model)
+    embeddings = await generate_embeddings([text], model=model, task_type=task_type)
     return embeddings[0]
 
 
 async def generate_embeddings(
-    texts: List[str], model: Optional[str] = None
+    texts: List[str],
+    model: Optional[str] = None,
+    task_type: Optional[str] = None
 ) -> List[List[float]]:
     """Génère des embeddings vectoriels par lot (batch)."""
     if not texts:

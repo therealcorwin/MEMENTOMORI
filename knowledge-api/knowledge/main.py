@@ -19,6 +19,7 @@ from knowledge.routers import (
     answer_router,
     ingest_router,
     admin_router,
+    orchestrator_router,
 )
 
 # 1. Configuration du logging structuré (B8)
@@ -90,3 +91,4 @@ app.include_router(search_router)
 app.include_router(answer_router)
 app.include_router(ingest_router)
 app.include_router(admin_router)
+app.include_router(orchestrator_router)

@@ -254,3 +254,32 @@ async def answer_with_fallback(
         tokens_output=0,
         warning="Synthèse IA indisponible — extraits bruts retournés"
     )
+
+
+async def generate_with_fallback(
+    prompt: str,
+    system_prompt: str = "Tu es un assistant précis et concis.",
+    temperature: float = 0.0,
+    max_tokens: int = 256,
+    timeout: float = 8.0,
+) -> tuple[str, FallbackLevel, str]:
+    """Génération simple de texte avec cascade de résilience (Gemini -> Mistral -> Ollama)."""
+    providers: list[tuple[BaseLLMProvider, FallbackLevel]] = []
+    if settings.GEMINI_API_KEY:
+        providers.append((GeminiProvider(settings.GEMINI_API_KEY, settings.LLM_MODEL), FallbackLevel.PRIMARY))
+    if settings.MISTRAL_API_KEY:
+        providers.append((MistralProvider(settings.MISTRAL_API_KEY), FallbackLevel.SECONDARY))
+    if await check_ollama_health():
+        providers.append((OllamaProvider(), FallbackLevel.LOCAL))
+
+    for provider, level in providers:
+        try:
+            answer, tokens_in, tokens_out = await asyncio.wait_for(
+                provider.generate(system_prompt=system_prompt, user_prompt=prompt),
+                timeout=timeout
+            )
+            return answer.strip(), level, provider.model
+        except Exception as e:
+            logger.warning("generate_fallback_failed", provider=provider.name, error=str(e))
+
+    raise RuntimeError("Tous les providers LLM ont échoué pour la génération de texte.")
