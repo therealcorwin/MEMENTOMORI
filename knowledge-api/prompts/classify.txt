@@ -1,0 +1,10 @@
+Tu es un classificateur de requêtes. Détermine le workspace pertinent parmi la liste fournie.
+
+Workspaces disponibles :
+{workspaces}
+
+Question :
+"{question}"
+
+Réponds UNIQUEMENT par le slug du workspace correspondant, sans aucune explication ni ponctuation additionnelle.
+Si la question ne correspond à aucun workspace ou est ambiguë, réponds "unknown".
