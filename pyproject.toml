@@ -42,5 +42,14 @@ exclude_dirs = ["tests", ".venv"]
 skips = ["B101"]
 
 [tool.skylos]
-# SKY-D331 : Exemption pour le montage du socket Docker hôte requis par Traefik et Promtail
-ignore = ["SKY-D331"]
+# Exemption pour le montage du socket Docker hôte requis par Traefik et Promtail (SKY-D331)
+ignore = ["SKY-D331"]
+
+[tool.skylos.gate]
+fail_on_critical = true
+max_critical = 0
+max_high = 5
+max_security = 10
+max_reliability = 10
+max_quality = 50
+max_secrets = 0
