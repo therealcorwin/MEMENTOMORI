@@ -3,6 +3,8 @@ Configuration initiale OAuth2 dans Authentik pour MEMENTOMORI (Sprint 1).
 Crée le Provider OAuth2, l'Application knowledge-api et le compte de service csbot.
 """
 
+import os
+
 from authentik.core.models import Application, User, UserTypes
 from authentik.crypto.models import CertificateKeyPair
 from authentik.flows.models import Flow
@@ -23,20 +25,23 @@ print(f"User csbot: {'créé' if user_created else 'existant'} (ID: {user.pk})")
 auth_flow = Flow.objects.get(slug="default-provider-authorization-implicit-consent")
 signing_cert = CertificateKeyPair.objects.get(name="authentik Internal JWT Certificate")
 
+csbot_client_id = os.environ.get("CSBOT_CLIENT_ID", "csbot")
+csbot_secret = os.environ.get("CSBOT_CLIENT_SECRET", "csbot_secret_2026_dev")  # skylos: ignore[SKY-L014] Valeur de repli pour environnement dev local
+
 # 3. Provider OAuth2 pour knowledge-api
 provider, prov_created = OAuth2Provider.objects.get_or_create(
     name="knowledge-api",
     defaults={
         "client_type": ClientTypes.CONFIDENTIAL,
-        "client_id": "csbot",
-        "client_secret": "csbot_secret_2026_dev",
+        "client_id": csbot_client_id,
+        "client_secret": csbot_secret,
         "authorization_flow": auth_flow,
         "signing_key": signing_cert,
     },
 )
 if not prov_created:
-    provider.client_id = "csbot"
-    provider.client_secret = "csbot_secret_2026_dev"
+    provider.client_id = csbot_client_id
+    provider.client_secret = csbot_secret
     provider.client_type = ClientTypes.CONFIDENTIAL
     provider.authorization_flow = auth_flow
     provider.signing_key = signing_cert

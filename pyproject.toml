@@ -40,3 +40,7 @@ exclude = [".venv"]
 [tool.bandit]
 exclude_dirs = ["tests", ".venv"]
 skips = ["B101"]
+
+[tool.skylos]
+# SKY-D331 : Exemption pour le montage du socket Docker hôte requis par Traefik et Promtail
+ignore = ["SKY-D331"]
