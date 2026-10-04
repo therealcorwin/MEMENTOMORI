@@ -116,6 +116,79 @@ services:
     networks:
       - dev_network
 
+  # ========== PAPERLESS-NGX (Sprint 2) ==========
+  paperless-db:
+    image: postgres:16-alpine
+    container_name: mementomori-paperless-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD:-dev_paperless_password}
+    volumes:
+      - ./paperless-db/bdd:/var/lib/postgresql/data
+    networks:
+      - dev_network
+      - shared_network
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: mementomori-paperless-redis
+    restart: unless-stopped
+    volumes:
+      - ./paperless-redis/data:/data
+    networks:
+      - dev_network
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: mementomori-gotenberg
+    restart: unless-stopped
+    networks:
+      - dev_network
+
+  tika:
+    image: apache/tika:latest
+    container_name: mementomori-tika
+    restart: unless-stopped
+    networks:
+      - dev_network
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:2.14
+    container_name: mementomori-paperless
+    restart: unless-stopped
+    depends_on:
+      - paperless-db
+      - paperless-redis
+      - gotenberg
+      - tika
+    ports:
+      - "8000:8000"
+    environment:
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_DBHOST: paperless-db
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD:-dev_paperless_password}
+      PAPERLESS_OCR_LANGUAGE: fra+eng
+      PAPERLESS_TIME_ZONE: Europe/Paris
+      PAPERLESS_ADMIN_USER: ${PAPERLESS_ADMIN_USER:-admin}
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD:-dev_paperless_admin_pwd}
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+      PAPERLESS_CONSUMER_RECURSIVE: "true"
+      PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: "true"
+      PAPERLESS_URL: http://localhost:8000
+    volumes:
+      - ./paperless/data:/usr/src/paperless/data
+      - ./paperless/media:/usr/src/paperless/media
+      - ./paperless/consume:/usr/src/paperless/consume
+      - ./paperless/export:/usr/src/paperless/export
+    networks:
+      - dev_network
+      - shared_network
+
 networks:
   dev_network:
     name: mementomori_dev_network
