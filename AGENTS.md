@@ -1,4 +1,13 @@
-# Graphify Agent Instructions
+# Instructions pour les Agents
+
+## Sécurité
+
+- **Interdiction de coder en dur des éléments sensibles** : Ne jamais écrire en dur dans le code source des informations sensibles (identifiants, logins, mots de passe, tokens, clés d'API, secrets, etc.).
+- **Utilisation d'un référentiel dédié** : Tous les éléments sensibles doivent impérativement être appelés et chargés depuis un référentiel externe sécurisé (fichier `.env`, Vault, gestionnaire de secrets, variables d'environnement).
+- **Opérations Git sécurisées** : Ne jamais effectuer d'action Git (`commit`, `merge`, `push`, etc.) contenant ou exposant des éléments sensibles.
+- **Exclusion et non-versionnement des `.env`** : Les fichiers `.env` et leurs variantes locales ne doivent en aucun cas être versionnés dans le dépôt Git et doivent obligatoirement figurer dans le fichier `.gitignore` (seuls des fichiers modèles d'exemple sans secrets comme `.env.example` peuvent être commités).
+
+## Graphify Agent Instructions
 
 Maintain a Graphify knowledge graph for this workspace.
 
