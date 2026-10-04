@@ -31,8 +31,8 @@ jobs:
         id: skylos_scan
         run: |
           set -o pipefail
-          # Scan complet (-a) avec blocage sur vulnérabilités critiques (--fail-on critical)
-          skylos . -a --fail-on critical 2>&1 | tee skylos_report.txt
+          # Scan complet (-a) avec Quality Gate (--gate), résumé Markdown (--summary) et annotations PR (--github)
+          skylos . -a --gate --summary --github 2>&1 | tee skylos_report.txt
         continue-on-error: true
 
       - name: Publier le résumé d'exécution dans GitHub
@@ -41,13 +41,13 @@ jobs:
           echo "## 🛡️ Résumé de l'audit Skylos" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.skylos_scan.outcome }}" = "success" ]; then
-            echo "✅ **Statut** : Audit réussi — Aucune vulnérabilité critique détectée." >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Statut** : Audit réussi — Le Quality Gate Skylos est validé." >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ **Statut** : Échec de l'audit — Des vulnérabilités critiques ont été détectées." >> $GITHUB_STEP_SUMMARY
+            echo "❌ **Statut** : Échec de l'audit — Des problèmes bloquants ont été détectés par le Quality Gate." >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Détails de l'analyse (Options : \`-a\`, \`--fail-on critical\`)" >> $GITHUB_STEP_SUMMARY
-          echo "<details><summary>👉 Cliquer pour afficher le rapport complet</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "### Détails de l'analyse (Options : \`-a\`, \`--gate\`, \`--summary\`, \`--github\`)" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>👉 Cliquer pour afficher le rapport textuel brut</summary>" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo '```text' >> $GITHUB_STEP_SUMMARY
           if [ -f skylos_report.txt ]; then
@@ -61,5 +61,6 @@ jobs:
       - name: Statut final de la CI
         if: steps.skylos_scan.outcome != 'success'
         run: |
-          echo "::error::Le scan Skylos a détecté des vulnérabilités critiques bloquantes."
+          echo "::error::Le scan Skylos a échoué sur le Quality Gate (vulnérabilités critiques ou secrets détectés)."
           exit 1
+
