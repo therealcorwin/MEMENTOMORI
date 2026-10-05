@@ -8,6 +8,13 @@ from typing import Any, List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledge.logging import get_logger
+from knowledge.metrics import (
+    llm_requests_total,
+    llm_latency_seconds,
+    llm_tokens_total,
+    llm_errors_total,
+    llm_confidence_score,
+)
 from knowledge.models import LlmUsage
 from knowledge.services.llm_resilience import (
     answer_with_fallback,
@@ -114,7 +121,28 @@ async def generate_grounded_answer(
         search_scores=scores
     )
 
-    # 4. Enregistrement de la métrique d'usage dans llm_usage (§14.10)
+    # 4. Enregistrement des métriques Prometheus (§14.13)
+    ws_id_str = str(workspace_id)
+    try:
+        llm_requests_total.labels(
+            provider=llm_resp.provider,
+            model=llm_resp.model,
+            request_type="answer",
+            workspace=ws_id_str,
+        ).inc()
+        llm_latency_seconds.labels(
+            provider=llm_resp.provider,
+            model=llm_resp.model,
+            request_type="answer",
+        ).observe(llm_resp.latency_ms / 1000.0)
+        llm_tokens_total.labels(provider=llm_resp.provider, model=llm_resp.model, direction="input").inc(llm_resp.tokens_input)
+        llm_tokens_total.labels(provider=llm_resp.provider, model=llm_resp.model, direction="output").inc(llm_resp.tokens_output)
+        if llm_resp.confidence is not None:
+            llm_confidence_score.labels(workspace=ws_id_str).observe(float(llm_resp.confidence))
+    except Exception as metric_err:
+        logger.warning("failed_to_record_llm_metrics", error=str(metric_err))
+
+    # 4b. Enregistrement de la métrique d'usage dans llm_usage (§14.10)
     try:
         # Coût approximatif Gemini Flash : ~0.075$ / 1M tokens in, 0.30$ / 1M tokens out
         cost_in = (llm_resp.tokens_input / 1_000_000.0) * 0.075

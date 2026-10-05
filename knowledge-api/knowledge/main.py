@@ -12,6 +12,7 @@ from knowledge import __version__
 from knowledge.config import settings
 from knowledge.logging import setup_logging, get_logger
 from knowledge.middleware.cors import setup_cors
+from knowledge.middleware.metrics import PrometheusMiddleware
 from knowledge.middleware.auth import verify_docs_credentials
 from knowledge.routers import (
     health_router,
@@ -53,6 +54,10 @@ app = FastAPI(
 
 # 3. Middleware CORS
 setup_cors(app)
+
+# 3b. Middleware métriques HTTP Prometheus (§14.13)
+app.add_middleware(PrometheusMiddleware)
+
 
 # 4. Métriques Prometheus (§14.13, Task 3.14)
 metrics_app = make_asgi_app()
