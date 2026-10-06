@@ -68,7 +68,7 @@ async def require_admin_access(
     db: AsyncSession = Depends(get_db)
 ) -> Principal:
     """Vérifie que l'utilisateur a les droits d'administration globale ou owner (§14.8)."""
-    if principal.external_id in ("admin", "dev_admin", "admin_user", "owner", "csbot"):
+    if getattr(principal, "is_admin", False) or principal.external_id in ("admin", "dev_admin", "admin_user", "owner", "csbot", "akadmin"):
         return principal
 
     pol = (await db.execute(

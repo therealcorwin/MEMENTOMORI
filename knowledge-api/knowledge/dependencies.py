@@ -113,6 +113,8 @@ async def get_current_principal(
 
     # 2. Validation du token JWT Authentik
     external_id: str = ""
+    display_name: str = ""
+    groups: list[str] = []
     try:
         if jwks_client:
             signing_key = jwks_client.get_signing_key_from_jwt(token)
@@ -123,12 +125,29 @@ async def get_current_principal(
                 audience=settings.AUTHENTIK_AUDIENCE,
                 options={"verify_aud": False}  # Tolérer audience si service account
             )
-            external_id = payload.get("client_id") or payload.get("sub") or payload.get("preferred_username")
+            # Prioriser le username lisible (preferred_username, nickname) sur le sub hash
+            external_id = (
+                payload.get("preferred_username")
+                or payload.get("nickname")
+                or payload.get("client_id")
+                or payload.get("sub")
+                or ""
+            )
+            display_name = payload.get("name") or payload.get("preferred_username") or external_id
+            groups = payload.get("groups") or []
         else:
             # Fallback non-vérifié uniquement en DEBUG
             if settings.DEBUG:
                 unverified = jwt.decode(token, options={"verify_signature": False})
-                external_id = unverified.get("client_id") or unverified.get("sub")
+                external_id = (
+                    unverified.get("preferred_username")
+                    or unverified.get("nickname")
+                    or unverified.get("client_id")
+                    or unverified.get("sub")
+                    or ""
+                )
+                display_name = unverified.get("name") or unverified.get("preferred_username") or external_id
+                groups = unverified.get("groups") or []
             else:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -158,11 +177,22 @@ async def get_current_principal(
         principal = Principal(
             type="app" if "csbot" in external_id.lower() else "user",
             external_id=external_id,
-            display_name=external_id
+            display_name=display_name
         )
         db.add(principal)
         await db.commit()
         await db.refresh(principal)
+    elif display_name and principal.display_name != display_name:
+        principal.display_name = display_name
+        await db.commit()
+        await db.refresh(principal)
+
+    # Détection des privilèges administrateur (groupe Authentik Admins ou super-admin akadmin)
+    is_admin = (
+        external_id in ("akadmin", "admin", "dev_admin")
+        or "authentik Admins" in groups
+    )
+    setattr(principal, "is_admin", is_admin)
 
     return principal
 
@@ -209,13 +239,17 @@ async def get_auth_context(
     policy = pol_result.scalar_one_or_none()
 
     if not policy:
-        # En mode DEV, auto-attribution uniquement pour les comptes d'administration explicites
-        if settings.ENVIRONMENT == "development" and principal.external_id in ("csbot", "dev_admin", "admin"):
+        # Auto-attribution pour les comptes d'administration globale ou membres d'Authentik Admins
+        is_superadmin = (
+            getattr(principal, "is_admin", False)
+            or principal.external_id in ("csbot", "dev_admin", "admin", "akadmin")
+        )
+        if (settings.ENVIRONMENT == "development" or is_superadmin) and is_superadmin:
             policy = Policy(
                 workspace_id=workspace.id,
                 principal_id=principal.id,
                 role="admin",
-                allowed_scopes=["owner", "copro", "conseil_syndical", "public"],
+                allowed_scopes=["owner", "copro", "conseil_syndical", "public", "syndic", "lot:42"],
                 actions=["read", "write", "search"],
                 max_sensitivity="secret"
             )
