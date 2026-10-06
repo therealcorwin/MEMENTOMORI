@@ -27,3 +27,5 @@ dist/
 Thumbs.db
 .graphify-out
 graphify-out/
+knowledge-dashboard/node_modules/
+knowledge-dashboard/dist/
