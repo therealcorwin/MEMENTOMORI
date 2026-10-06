@@ -168,15 +168,30 @@ async def get_current_principal(
 
 
 async def get_auth_context(
-    workspace_id: uuid.UUID,
+    workspace_id: uuid.UUID | str,
     principal: Principal = Depends(get_current_principal),
     db: AsyncSession = Depends(get_db)
 ) -> AuthContext:
-    """Vérifie les droits du Principal sur le Workspace spécifié (RBAC)."""
-    # 1. Vérifier existence du workspace
-    ws_result = await db.execute(
-        select(Workspace).where(Workspace.id == workspace_id)
-    )
+    """Vérifie les droits du Principal sur le Workspace spécifié (RBAC). Accepte un UUID ou un slug."""
+    # 1. Vérifier existence du workspace (par UUID ou slug)
+    ws_uuid = None
+    if isinstance(workspace_id, uuid.UUID):
+        ws_uuid = workspace_id
+    else:
+        try:
+            ws_uuid = uuid.UUID(str(workspace_id))
+        except (ValueError, TypeError):
+            ws_uuid = None
+
+    if ws_uuid:
+        ws_result = await db.execute(
+            select(Workspace).where(Workspace.id == ws_uuid)
+        )
+    else:
+        ws_result = await db.execute(
+            select(Workspace).where(Workspace.slug == str(workspace_id))
+        )
+
     workspace = ws_result.scalar_one_or_none()
     if not workspace:
         raise HTTPException(
@@ -187,7 +202,7 @@ async def get_auth_context(
     # 2. Vérifier la policy pour ce principal
     pol_result = await db.execute(
         select(Policy).where(
-            Policy.workspace_id == workspace_id,
+            Policy.workspace_id == workspace.id,
             Policy.principal_id == principal.id
         )
     )
@@ -197,7 +212,7 @@ async def get_auth_context(
         # En mode DEV, auto-attribution uniquement pour les comptes d'administration explicites
         if settings.ENVIRONMENT == "development" and principal.external_id in ("csbot", "dev_admin", "admin"):
             policy = Policy(
-                workspace_id=workspace_id,
+                workspace_id=workspace.id,
                 principal_id=principal.id,
                 role="admin",
                 allowed_scopes=["owner", "copro", "conseil_syndical", "public"],

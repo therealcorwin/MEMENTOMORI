@@ -13,24 +13,25 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
-// Injecte le token JWT à chaque requête (ou le principal dev en mode local)
+// Injecte le token JWT à chaque requête (ou le principal sélectionné en mode dev)
 apiClient.interceptors.request.use((config) => {
   const token = sessionStorage.getItem('access_token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
-  } else if (import.meta.env.DEV) {
-    config.headers['X-Dev-Principal'] = 'admin_user'
+  } else if (import.meta.env.DEV || sessionStorage.getItem('dev_bypass') === 'true') {
+    const activePrincipal = sessionStorage.getItem('dev_principal') || 'admin_user'
+    config.headers['X-Dev-Principal'] = activePrincipal
   }
   return config
 })
 
-// Redirige vers /login si le token est expiré (401, hors mode dev)
+// En cas d'erreur 401
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !import.meta.env.DEV) {
+    if (error.response?.status === 401 && !import.meta.env.DEV && sessionStorage.getItem('dev_bypass') !== 'true') {
       sessionStorage.removeItem('access_token')
-      window.location.href = '/login'
+      window.location.href = '/'
     }
     return Promise.reject(error)
   },

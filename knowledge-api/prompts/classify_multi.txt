@@ -19,6 +19,6 @@ SECONDARY:<slug> (score)
 UNKNOWN
 
 Format strict :
-PRIMARY:copro-jardins (0.9)
+PRIMARY:copro (0.9)
 SECONDARY:finances-perso (0.7)
 Ne fournis aucune autre explication.

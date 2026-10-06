@@ -28,7 +28,7 @@ async def test_paperless_webhook_ingest_with_payload(async_client, db_session):
             "title": "Compte-rendu Réunion CS Mars 2026",
             "content": "Ordre du jour : Travaux d'étanchéité terrasse et réfection ascenseur.",
             "tags": ["cs", "confidentiel"],
-            "workspace_slug": "copro-jardins",
+            "workspace_slug": "copro",
             "collection_name": "Archives Copropriété"
         }
 
@@ -77,7 +77,7 @@ async def test_paperless_webhook_fetch_on_missing_content(async_client, db_sessi
 
         payload = {
             "document_id": 1050,
-            "workspace_slug": "copro-jardins",
+            "workspace_slug": "copro",
             "collection_name": "Archives Copropriété"
         }
 
@@ -104,7 +104,7 @@ async def test_ingest_single_document_deduplication(db_session):
         id_1 = await ingest_single_document(
             title="Doc Test Dédup 1",
             content=content,
-            workspace_slug="copro-jardins",
+            workspace_slug="copro",
             collection_name="Archives Copropriété",
             db=db_session
         )
@@ -115,7 +115,7 @@ async def test_ingest_single_document_deduplication(db_session):
         id_2 = await ingest_single_document(
             title="Doc Test Dédup 2 (Copie)",
             content=variant_content,
-            workspace_slug="copro-jardins",
+            workspace_slug="copro",
             collection_name="Archives Copropriété",
             db=db_session
         )
@@ -131,7 +131,7 @@ async def test_cptcopro_sync_idempotence_and_records(db_session):
         mock_emb.return_value = [[0.05] * 768]
 
         # 1. Première exécution (ou vérification que les 4 records sont reconnus)
-        count_first = await run_cptcopro_sync(workspace_slug="copro-jardins", db=db_session)
+        count_first = await run_cptcopro_sync(workspace_slug="copro", db=db_session)
         assert count_first >= 0  # 4 si nouvelle base, ou 4 IDs retournés
 
         # 2. Vérification de la présence des documents CPTCopro en base
@@ -147,7 +147,7 @@ async def test_cptcopro_sync_idempotence_and_records(db_session):
         assert "lot:28" in scopes
 
         # 3. Seconde exécution (idempotente)
-        count_second = await run_cptcopro_sync(workspace_slug="copro-jardins", db=db_session)
+        count_second = await run_cptcopro_sync(workspace_slug="copro", db=db_session)
         assert count_second == 4  # Dédupliqué, les 4 IDs existants sont retournés sans lever d'erreur
 
 
@@ -195,7 +195,7 @@ async def test_admin_alert_formatted_request():
 @pytest.mark.asyncio
 async def test_cptcopro_rbac_search_isolation(async_client, db_session):
     """Vérifie que les relevés financiers de lot (lot:12) ne sont pas visibles par un copropriétaire non autorisé."""
-    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))
     ws = res.scalar_one_or_none()
     assert ws is not None
     ws_id = str(ws.id)

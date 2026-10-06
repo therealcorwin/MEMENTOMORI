@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>Renouvellement de session OIDC</title>
+</head>
+<body>
+    <script>
+        // Callback de renouvellement silencieux de jeton pour oidc-client-ts
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'oidc-silent-renew', url: window.location.href }, window.location.origin);
+        }
+    </script>
+</body>
+</html>
+

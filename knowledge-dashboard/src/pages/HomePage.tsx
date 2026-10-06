@@ -61,7 +61,7 @@ export function HomePage() {
           <CardTitle>Documents par workspace</CardTitle>
         </CardHeader>
         <CardContent>
-          {stats.documents_by_workspace.length === 0 ? (
+          {(!stats.documents_by_workspace || stats.documents_by_workspace.length === 0) ? (
             <p className="text-sm text-[hsl(var(--muted-foreground))] py-4">Aucun document rattaché à un workspace.</p>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -78,7 +78,7 @@ export function HomePage() {
                   labelStyle={{ color: 'hsl(var(--foreground))' }}
                 />
                 <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                  {stats.documents_by_workspace.map((_, i) => (
+                  {(stats.documents_by_workspace || []).map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Bar>
@@ -95,10 +95,10 @@ export function HomePage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {stats.recent_ingestions.length === 0 && (
+            {(!stats.recent_ingestions || stats.recent_ingestions.length === 0) && (
               <p className="text-[hsl(var(--muted-foreground))] text-sm">Aucune ingestion récente.</p>
             )}
-            {stats.recent_ingestions.map((ing) => (
+            {(stats.recent_ingestions || []).map((ing) => (
               <div key={ing.id} className="flex items-center justify-between py-2 border-b border-[hsl(var(--border))] last:border-0">
                 <div>
                   <span className="text-sm font-medium">{ing.title}</span>

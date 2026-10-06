@@ -62,7 +62,7 @@ async def test_agent_service_accounts_and_policies_exist(db_session):
 @pytest.mark.asyncio
 async def test_orchestrator_cannot_access_data_directly(async_client, db_session):
     """Tâche 7.5 : Vérifie que l'orchestrateur est rejeté (403) s'il tente d'interroger /v1/search directement."""
-    ws = (await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))).scalar_one_or_none()
+    ws = (await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))).scalar_one_or_none()
     assert ws is not None
 
     resp = await async_client.post(
@@ -83,14 +83,14 @@ async def test_shared_collection_many_to_many(db_session):
     )).scalar_one_or_none()
     assert col is not None
 
-    # Doit être rattachée à copro-jardins ET finances-perso
+    # Doit être rattachée à copro ET finances-perso
     links = (await db_session.execute(
         select(CollectionWorkspace).where(CollectionWorkspace.collection_id == col.id)
     )).scalars().all()
     assert len(links) >= 2
 
     ws_ids = {l.workspace_id for l in links}
-    ws_copro = (await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))).scalar_one()
+    ws_copro = (await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))).scalar_one()
     ws_fin = (await db_session.execute(select(Workspace).where(Workspace.slug == "finances-perso"))).scalar_one()
 
     assert ws_copro.id in ws_ids
@@ -103,7 +103,7 @@ async def test_orchestrator_classification_single_workspace(db_session):
     # Copropriété
     c_copro = await classify_question("Quels sont les horaires autorisés pour les travaux bruyants ?", db=db_session)
     assert c_copro.strategy == "single"
-    assert c_copro.workspaces[0].workspace_slug == "copro-jardins"
+    assert c_copro.workspaces[0].workspace_slug == "copro"
 
     # Finances
     c_fin = await classify_question("Quel est le solde de mon compte courant et de mon livret A ?", db=db_session)
@@ -127,7 +127,7 @@ async def test_orchestrator_classification_multi_workspace(db_session):
     c_multi = await classify_question(q, db=db_session)
     assert c_multi.strategy == "multi"
     slugs = {m.workspace_slug for m in c_multi.workspaces}
-    assert "copro-jardins" in slugs
+    assert "copro" in slugs
     assert "finances-perso" in slugs
 
 
@@ -229,7 +229,7 @@ async def test_orchestrate_api_endpoints(async_client):
     data_multi = resp_multi.json()
     assert data_multi["strategy"] == "multi"
     assert len(data_multi.get("workspaces", [])) >= 2
-    assert "copro-jardins" in data_multi["workspaces"]
+    assert "copro" in data_multi["workspaces"]
     assert "finances-perso" in data_multi["workspaces"]
     assert "answer" in data_multi
     assert len(data_multi.get("sources", [])) > 0

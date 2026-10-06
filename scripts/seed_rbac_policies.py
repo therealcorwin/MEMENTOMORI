@@ -1,7 +1,7 @@
 """
 Script d'initialisation et d'application des politiques RBAC (Sprint 5).
 Configure les 3 rôles canoniques de copropriété (Copropriétaire, CS, Admin),
-l'isolation inter-workspaces (copro-jardins vs sante-perso) et les fragments sensibles.
+l'isolation inter-workspaces (copro vs sante-perso) et les fragments sensibles.
 """
 
 import asyncio
@@ -39,23 +39,23 @@ async def seed_rbac():
 
     engine = create_async_engine(settings.DATABASE_URL)
     async with AsyncSession(engine) as session:
-        # 1. Workspace copro-jardins
+        # 1. Workspace copro
         ws_copro = (await session.execute(
-            select(Workspace).where(Workspace.slug == "copro-jardins")
+            select(Workspace).where(Workspace.slug == "copro")
         )).scalar_one_or_none()
 
         if not ws_copro:
             ws_copro = Workspace(
                 name="Les Jardins de Provence",
-                slug="copro-jardins",
+                slug="copro",
                 domain="pro",
                 settings={"type": "copropriete", "address": "12 Rue des Fleurs, 13000 Marseille"}
             )
             session.add(ws_copro)
             await session.flush()
-            print(f"  [+] Workspace créé : copro-jardins ({ws_copro.id})")
+            print(f"  [+] Workspace créé : copro ({ws_copro.id})")
         else:
-            print(f"  [=] Workspace existant : copro-jardins ({ws_copro.id})")
+            print(f"  [=] Workspace existant : copro ({ws_copro.id})")
 
         # 2. Workspace sante-perso (pour vérification de non-fuite inter-workspaces)
         ws_sante = (await session.execute(
@@ -125,7 +125,7 @@ async def seed_rbac():
 
         # 4. Politiques de sécurité (RBAC §4.2 & §5.3)
         policies_data = [
-            # copro-jardins
+            # copro
             (
                 ws_copro.id,
                 principals_map["copro_user"].id,
@@ -206,7 +206,7 @@ async def seed_rbac():
         await session.flush()
 
         # 5. Documents supplémentaires de test (Secret, Lot 42, Santé)
-        # 5a. Document secret dans copro-jardins (Test 5.3)
+        # 5a. Document secret dans copro (Test 5.3)
         doc_secret = (await session.execute(
             select(Document).where(Document.title == "Codes d'accès et alarmes sécurisées")
         )).scalar_one_or_none()
@@ -240,13 +240,13 @@ async def seed_rbac():
                 page_number=1,
                 content=content,
                 embedding=emb,
-                context_prefix="copro-jardins > Syndic",
+                context_prefix="copro > Syndic",
                 citation_ref={"document_title": doc_secret.title, "page": 1}
             )
             session.add(frag)
             print(f"  [+] Document secret créé : '{doc_secret.title}' (scope=syndic, sens=secret)")
 
-        # 5b. Document lot 42 dans copro-jardins (Test 5.6)
+        # 5b. Document lot 42 dans copro (Test 5.6)
         doc_lot42 = (await session.execute(
             select(Document).where(Document.title == "Décompte individuel de charges 2025 - Lot 42")
         )).scalar_one_or_none()
@@ -280,7 +280,7 @@ async def seed_rbac():
                 page_number=1,
                 content=content,
                 embedding=emb,
-                context_prefix="copro-jardins > Lot 42",
+                context_prefix="copro > Lot 42",
                 citation_ref={"document_title": doc_lot42.title, "page": 1}
             )
             session.add(frag)
@@ -326,7 +326,7 @@ async def seed_rbac():
             session.add(frag)
             print(f"  [+] Document santé créé : '{doc_sante.title}' dans sante-perso")
 
-        # 5d. Contrat ascenseur OTIS dans copro-jardins (Test 5.1 / 5.5)
+        # 5d. Contrat ascenseur OTIS dans copro (Test 5.1 / 5.5)
         doc_otis = (await session.execute(
             select(Document).where(Document.title == "Contrat de maintenance ascenseur OTIS 2026")
         )).scalar_one_or_none()
@@ -360,7 +360,7 @@ async def seed_rbac():
                 page_number=1,
                 content=content_otis,
                 embedding=emb_otis,
-                context_prefix="copro-jardins > Conseil Syndical",
+                context_prefix="copro > Conseil Syndical",
                 citation_ref={"document_title": doc_otis.title, "page": 1}
             )
             session.add(frag_otis)

@@ -188,7 +188,7 @@ async def ingest_single_document(
 
 
 async def run_paperless_sync(
-    workspace_slug: str = "copro-jardins",
+    workspace_slug: str = "copro",
     collection_name: str = "Archives Copropriété",
     db: Optional[AsyncSession] = None
 ) -> int:

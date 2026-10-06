@@ -1,5 +1,5 @@
 {
-  "eval_set": "copro-jardins-v1",
+  "eval_set": "copro-v1",
   "version": "1.0",
   "total_questions": 35,
   "questions": [
@@ -9,7 +9,7 @@
       "expected_answer": "La société OTIS Ascenseurs SAS est en charge de la maintenance de l'ascenseur.",
       "expected_sources": ["Contrat de maintenance ascenseur OTIS 2026"],
       "source_document": "Contrat de maintenance ascenseur OTIS 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "easy",
       "keywords": ["OTIS", "maintenance", "ascenseur"]
@@ -20,7 +20,7 @@
       "expected_answer": "L'intervention d'urgence est garantie sous 45 minutes pour la désincarcération.",
       "expected_sources": ["Contrat de maintenance ascenseur OTIS 2026"],
       "source_document": "Contrat de maintenance ascenseur OTIS 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["45 minutes", "désincarcération"]
@@ -31,7 +31,7 @@
       "expected_answer": "La redevance annuelle forfaitaire est de 3 600,00 EUR HT (soit 4 320,00 EUR TTC).",
       "expected_sources": ["Contrat de maintenance ascenseur OTIS 2026"],
       "source_document": "Contrat de maintenance ascenseur OTIS 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["3 600", "4 320", "EUR"]
@@ -42,7 +42,7 @@
       "expected_answer": "Le contrat prévoit 8 visites annuelles, soit un passage toutes les 6 semaines.",
       "expected_sources": ["Contrat de maintenance ascenseur OTIS 2026"],
       "source_document": "Contrat de maintenance ascenseur OTIS 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["8 visites", "6 semaines"]
@@ -53,7 +53,7 @@
       "expected_answer": "Le contrat a une durée de 3 ans, du 01/01/2026 au 31/12/2028.",
       "expected_sources": ["Contrat de maintenance ascenseur OTIS 2026"],
       "source_document": "Contrat de maintenance ascenseur OTIS 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "easy",
       "keywords": ["3 ans", "2026", "2028"]
@@ -64,7 +64,7 @@
       "expected_answer": "L'entretien des espaces verts a été réalisé par la société Vert Avenir SARL.",
       "expected_sources": ["Facture Entretien Espaces Verts - Vert Avenir T1 2026"],
       "source_document": "Facture Entretien Espaces Verts - Vert Avenir T1 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "easy",
       "keywords": ["Vert Avenir"]
@@ -75,7 +75,7 @@
       "expected_answer": "Le montant total net à payer TTC est de 1 250,00 EUR (1 041,67 EUR HT).",
       "expected_sources": ["Facture Entretien Espaces Verts - Vert Avenir T1 2026"],
       "source_document": "Facture Entretien Espaces Verts - Vert Avenir T1 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["1 250", "TTC", "EUR"]
@@ -86,7 +86,7 @@
       "expected_answer": "Tonte des pelouses, taille des haies de lauriers et arbustes, et désherbage manuel des massifs.",
       "expected_sources": ["Facture Entretien Espaces Verts - Vert Avenir T1 2026"],
       "source_document": "Facture Entretien Espaces Verts - Vert Avenir T1 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["tonte", "pelouses", "haies", "désherbage"]
@@ -97,7 +97,7 @@
       "expected_answer": "Le budget prévisionnel voté pour 2026 est de 48 000,00 EUR (Résolution 3).",
       "expected_sources": ["Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025"],
       "source_document": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["48 000", "budget"]
@@ -108,7 +108,7 @@
       "expected_answer": "Oui, les comptes 2024 ont été approuvés à l'unanimité pour un montant de 46 210 EUR.",
       "expected_sources": ["Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025"],
       "source_document": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["46 210", "approuvés", "unanimité"]
@@ -119,7 +119,7 @@
       "expected_answer": "Le Cabinet Mer & Soleil a reçu quitus pour sa gestion avec 780 voix pour et 40 voix contre.",
       "expected_sources": ["Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025"],
       "source_document": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "medium",
       "keywords": ["Mer & Soleil", "quitus"]
@@ -130,7 +130,7 @@
       "expected_answer": "M. Pierre Dupont (Lot 12), Mme Sophie Laurent (Lot 28) et M. Alexandre Garcia (Lot 42).",
       "expected_sources": ["Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025"],
       "source_document": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "medium",
       "keywords": ["Dupont", "Laurent", "Garcia"]
@@ -141,7 +141,7 @@
       "expected_answer": "Le vote a été reporté à l'assemblée générale de 2026 après examen des devis (Résolution 5).",
       "expected_sources": ["Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025"],
       "source_document": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["reporté", "toiture", "2026"]
@@ -152,7 +152,7 @@
       "expected_answer": "L'immeuble est destiné à l'usage exclusif d'habitation bourgeoise (Article 1).",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["habitation bourgeoise"]
@@ -163,7 +163,7 @@
       "expected_answer": "Oui, les professions libérales sont autorisées sous réserve d'absence de nuisances (Article 1).",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "medium",
       "keywords": ["professions libérales", "autorisé", "nuisances"]
@@ -174,7 +174,7 @@
       "expected_answer": "Le gros œuvre, les coursives, les halls, escaliers, ascenseur, local vélos et espaces verts.",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "medium",
       "keywords": ["gros oeuvre", "coursives", "halls", "escaliers", "local velos"]
@@ -185,7 +185,7 @@
       "expected_answer": "La quote-part générale du Lot 42 est de 45 / 1000èmes (Article 12).",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["45 / 1000", "45"]
@@ -196,7 +196,7 @@
       "expected_answer": "La quote-part de charges d'ascenseur pour le Lot 42 est de 52 / 1000èmes.",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "medium",
       "keywords": ["52 / 1000", "52"]
@@ -207,7 +207,7 @@
       "expected_answer": "Oui, ils sont tolérés à condition de ne causer aucun trouble de jouissance (Article 18).",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["tolérés", "animaux", "trouble"]
@@ -218,7 +218,7 @@
       "expected_answer": "Non, tout encombrement des paliers et parties communes est strictement prohibé (Article 18).",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["encombrement", "prohibé"]
@@ -229,7 +229,7 @@
       "expected_answer": "Rupture d'un joint d'évacuation sous le bac à douche de l'appartement Lot 52 au 3ème étage.",
       "expected_sources": ["Declaration sinistre degat des eaux Lot 42 - Fevrier 2026"],
       "source_document": "Declaration sinistre degat des eaux Lot 42 - Fevrier 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["joint", "bac a douche", "Lot 52"]
@@ -240,7 +240,7 @@
       "expected_answer": "Police AXA Assurances N° 987654321 (Dossier DDE-2026-4412).",
       "expected_sources": ["Declaration sinistre degat des eaux Lot 42 - Fevrier 2026"],
       "source_document": "Declaration sinistre degat des eaux Lot 42 - Fevrier 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "hard",
       "keywords": ["AXA", "987654321"]
@@ -251,7 +251,7 @@
       "expected_answer": "Peintures cloquées et plâtre dégradé au plafond de l'entrée, infiltration cloison cuisine/séjour.",
       "expected_sources": ["Declaration sinistre degat des eaux Lot 42 - Fevrier 2026"],
       "source_document": "Declaration sinistre degat des eaux Lot 42 - Fevrier 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["peintures", "plafond", "cloison"]
@@ -262,7 +262,7 @@
       "expected_answer": "Le solde débiteur est de 145,20 EUR à régler avant le 31/03/2026 par M. Alexandre Garcia.",
       "expected_sources": ["Décompte individuel de charges 2025 - Lot 42"],
       "source_document": "Décompte individuel de charges 2025 - Lot 42",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire_lot42",
       "difficulty": "medium",
       "keywords": ["145.20", "debiteur", "Alexandre Garcia"]
@@ -273,7 +273,7 @@
       "expected_answer": "Code alarme sous-sol : 9876. Clé armoire électrique : clef ronde n°4.",
       "expected_sources": ["Codes d'accès et alarmes sécurisées"],
       "source_document": "Codes d'accès et alarmes sécurisées",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "admin",
       "difficulty": "hard",
       "keywords": ["9876", "clef ronde", "coffre"]
@@ -284,7 +284,7 @@
       "expected_answer": "12 Rue des Fleurs, 13000 Marseille.",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["12 Rue des Fleurs", "Marseille"]
@@ -295,7 +295,7 @@
       "expected_answer": "L'ascenseur électrique 8 personnes se situe dans le Bâtiment A.",
       "expected_sources": ["Contrat de maintenance ascenseur OTIS 2026"],
       "source_document": "Contrat de maintenance ascenseur OTIS 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "easy",
       "keywords": ["Batiment A", "8 personnes"]
@@ -306,7 +306,7 @@
       "expected_answer": "820 / 1000èmes de tantièmes étaient présents ou représentés.",
       "expected_sources": ["Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025"],
       "source_document": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "medium",
       "keywords": ["820 / 1000", "820"]
@@ -317,7 +317,7 @@
       "expected_answer": "La TVA au taux de 20,0% s'élève à 208,33 EUR.",
       "expected_sources": ["Facture Entretien Espaces Verts - Vert Avenir T1 2026"],
       "source_document": "Facture Entretien Espaces Verts - Vert Avenir T1 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "hard",
       "keywords": ["208,33", "20%"]
@@ -328,7 +328,7 @@
       "expected_answer": "Le Lot 42 est un appartement de type 3 situé au 2ème étage du Bâtiment A.",
       "expected_sources": ["Reglement de Copropriete - Les Jardins de Provence"],
       "source_document": "Reglement de Copropriete - Les Jardins de Provence",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "keywords": ["2ème étage", "2eme", "Batiment A"]
@@ -339,7 +339,7 @@
       "expected_answer": "Le règlement est prévu sous 30 jours, soit avant le 14 avril 2026.",
       "expected_sources": ["Facture Entretien Espaces Verts - Vert Avenir T1 2026"],
       "source_document": "Facture Entretien Espaces Verts - Vert Avenir T1 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "medium",
       "keywords": ["30 jours", "virement"]
@@ -350,7 +350,7 @@
       "expected_answer": "M. Pierre Dupont est propriétaire du Lot 12.",
       "expected_sources": ["Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025"],
       "source_document": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "medium",
       "keywords": ["Lot 12", "Dupont"]
@@ -361,7 +361,7 @@
       "expected_answer": "Le sinistre a été constaté le 10 février 2026 à 09h00.",
       "expected_sources": ["Declaration sinistre degat des eaux Lot 42 - Fevrier 2026"],
       "source_document": "Declaration sinistre degat des eaux Lot 42 - Fevrier 2026",
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "cs",
       "difficulty": "hard",
       "keywords": ["10 février 2026", "09h00"]
@@ -372,7 +372,7 @@
       "expected_answer": "Les documents fournis ne contiennent pas d'information sur la piscine municipale.",
       "expected_sources": [],
       "source_document": null,
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "unanswerable": true,
@@ -384,7 +384,7 @@
       "expected_answer": "Cette information n'apparaît pas dans les documents disponibles de la copropriété.",
       "expected_sources": [],
       "source_document": null,
-      "workspace": "copro-jardins",
+      "workspace": "copro",
       "role": "coproprietaire",
       "difficulty": "easy",
       "unanswerable": true,

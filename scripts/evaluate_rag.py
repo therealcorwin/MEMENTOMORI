@@ -88,11 +88,11 @@ async def evaluate_dataset(
     }
 
     async with session_factory() as session:
-        # Récupérer l'espace de travail copro-jardins
+        # Récupérer l'espace de travail copro
         ws_copro = (await session.execute(
-            select(Workspace).where(Workspace.slug == "copro-jardins")
+            select(Workspace).where(Workspace.slug == "copro")
         )).scalar_one_or_none()
-        assert ws_copro is not None, "Workspace copro-jardins introuvable !"
+        assert ws_copro is not None, "Workspace copro introuvable !"
         ws_id = ws_copro.id
 
         principals_cache = {}
@@ -247,7 +247,7 @@ async def evaluate_dataset(
     report_content = f"""# Rapport d'Évaluation de la Qualité RAG — Sprint 6
 **Date** : {time.strftime('%Y-%m-%d %H:%M:%S')}  
 **Jeu de test** : `eval/questions.json` ({total} questions)  
-**Workspace** : `copro-jardins`
+**Workspace** : `copro`
 
 ## 1. Tableau Récapitulatif des Métriques Clés
 

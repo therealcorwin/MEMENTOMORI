@@ -8,8 +8,13 @@ export interface Workspace {
   id: string
   slug: string
   name: string
+  domain?: 'perso' | 'pro'
   description?: string
+  settings?: Record<string, unknown>
   document_count?: number
+  documents_count?: number
+  collections_count?: number
+  policies_count?: number
   created_at: string
 }
 
@@ -19,33 +24,45 @@ export interface Document {
   status: DocumentStatus
   sensitivity: Sensitivity
   scope: string
-  workspace_id: string
+  collection_id?: string
+  collection_name?: string
+  workspace_id?: string
   workspace_slug?: string
   source_url?: string
+  version?: number
+  is_active?: boolean
   created_at: string
-  updated_at: string
+  updated_at?: string
   fragment_count?: number
+  metadata?: Record<string, unknown>
 }
 
 export interface DocumentDetail extends Document {
   content_preview?: string
+  extracted_text?: string
+  fragments_count?: number
   versions: DocumentVersion[]
   fragments?: Fragment[]
 }
 
 export interface DocumentVersion {
   id: string
-  version: number
+  version?: number
+  version_number?: number
+  original_file_ref?: string
   created_at: string
   checksum?: string
 }
 
 export interface Fragment {
   id: string
-  content: string
+  content?: string
+  content_preview?: string
+  chunk_index?: number
+  context_prefix?: string
   page_number?: number
-  sensitivity: Sensitivity
-  scope: string
+  sensitivity?: Sensitivity
+  scope?: string
 }
 
 export interface SearchResult {
@@ -85,12 +102,20 @@ export interface RecentIngestion {
 }
 
 export interface AuditLog {
-  id: string
+  id: string | number
   created_at: string
-  principal_id: string
+  principal_id?: string
+  principal_name?: string
+  principal_type?: string
   action: string
   workspace_id?: string
+  workspace_name?: string
+  workspace_slug?: string
+  target_type?: string
   target_id?: string
+  target_name?: string
+  summary?: string
+  detail?: Record<string, unknown>
   details?: Record<string, unknown>
 }
 

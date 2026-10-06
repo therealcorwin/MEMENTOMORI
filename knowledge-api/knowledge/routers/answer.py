@@ -43,7 +43,7 @@ async def answer_question(
     if req.use_cache:
         cached_result = await cache_service.get(
             question=req.query,
-            workspace_id=req.workspace_id,
+            workspace_id=auth_ctx.workspace.id,
             mode="answer"
         )
         if cached_result:
@@ -73,7 +73,7 @@ async def answer_question(
     fragments = await hybrid_search(
         query=req.query,
         query_embedding=query_emb,
-        workspace_ids=[req.workspace_id],
+        workspace_ids=[auth_ctx.workspace.id],
         allowed_scopes=auth_ctx.allowed_scopes,
         max_sensitivity=auth_ctx.max_sensitivity,
         db=db,
@@ -84,7 +84,7 @@ async def answer_question(
     gen_result = await generate_grounded_answer(
         question=req.query,
         fragments=fragments,
-        workspace_id=req.workspace_id,
+        workspace_id=auth_ctx.workspace.id,
         principal_id=auth_ctx.principal.id,
         db=db
     )
@@ -95,7 +95,7 @@ async def answer_question(
     if req.use_cache and gen_result["sources"]:
         await cache_service.set(
             question=req.query,
-            workspace_id=req.workspace_id,
+            workspace_id=auth_ctx.workspace.id,
             answer=gen_result["answer"],
             sources=gen_result["sources"],
             confidence=str(gen_result["confidence"]),
@@ -106,10 +106,10 @@ async def answer_question(
     # 6. Journal d'audit
     audit = AuditLog(
         principal_id=auth_ctx.principal.id,
-        workspace_id=req.workspace_id,
+        workspace_id=auth_ctx.workspace.id,
         action="answer",
         target_type="workspace",
-        target_id=req.workspace_id,
+        target_id=auth_ctx.workspace.id,
         detail={
             "query": req.query,
             "confidence": gen_result["confidence"],

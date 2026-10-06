@@ -49,13 +49,13 @@ async def seed_agents_and_workspaces():
     async with session_maker() as session:
         # 1. Récupération des workspaces existants
         ws_copro = (await session.execute(
-            select(Workspace).where(Workspace.slug == "copro-jardins")
+            select(Workspace).where(Workspace.slug == "copro")
         )).scalar_one_or_none()
         ws_sante = (await session.execute(
             select(Workspace).where(Workspace.slug == "sante-perso")
         )).scalar_one_or_none()
 
-        assert ws_copro is not None, "Workspace copro-jardins introuvable. Exécuter d'abord seed_rbac_policies.py"
+        assert ws_copro is not None, "Workspace copro introuvable. Exécuter d'abord seed_rbac_policies.py"
 
         # 2. Création du workspace finances-perso (Tâche 7.6)
         ws_finances = (await session.execute(

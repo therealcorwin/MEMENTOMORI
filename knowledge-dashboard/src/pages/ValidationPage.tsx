@@ -15,20 +15,31 @@ export function ValidationPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [selectedWs, setSelectedWs] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const fetchDocs = async () => {
     setLoading(true)
+    setError(null)
     try {
       const res = await documentsApi.list({ status: 'a_verifier', workspace_id: selectedWs || undefined, limit: 50 })
-      setDocs(res.items ?? res)
+      setDocs(Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [])
+    } catch (err) {
+      console.error('Erreur chargement documents validation:', err)
+      setError('Impossible de charger les documents à vérifier.')
+      setDocs([])
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    workspacesApi.list().then(setWorkspaces)
+    workspacesApi.list()
+      .then((data) => setWorkspaces(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        console.error('Erreur chargement workspaces:', err)
+        setWorkspaces([])
+      })
   }, [])
 
   useEffect(() => { fetchDocs() }, [selectedWs])
@@ -53,14 +64,15 @@ export function ValidationPage() {
           onChange={(e) => setSelectedWs(e.target.value)}
         >
           <option value="">Tous les workspaces</option>
-          {workspaces.map((ws) => (
+          {(workspaces || []).map((ws) => (
             <option key={ws.id} value={ws.id}>{ws.name}</option>
           ))}
         </select>
       </div>
 
       {loading && <p className="text-[hsl(var(--muted-foreground))]">Chargement…</p>}
-      {!loading && docs.length === 0 && (
+      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {!loading && !error && docs.length === 0 && (
         <Card>
           <CardContent className="pt-6 text-center text-[hsl(var(--muted-foreground))]">
             ✅ Aucun document en attente de validation.
@@ -69,14 +81,14 @@ export function ValidationPage() {
       )}
 
       <div className="space-y-3">
-        {docs.map((doc) => (
+        {(docs || []).map((doc) => (
           <Card key={doc.id}>
             <CardHeader className="pb-2">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <CardTitle className="text-base">{doc.title}</CardTitle>
                   <div className="flex items-center gap-2 mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-                    <span>{doc.workspace_slug ?? doc.workspace_id}</span>
+                    <span>{doc.collection_name ?? doc.workspace_slug ?? doc.workspace_id ?? '—'}</span>
                     <span>·</span>
                     <span>{formatDate(doc.created_at)}</span>
                   </div>

@@ -24,7 +24,7 @@ class PaperlessWebhookPayload(BaseModel):
     title: Optional[str] = None
     content: Optional[str] = None
     tags: Optional[list[str]] = Field(default_factory=list)
-    workspace_slug: str = "copro-jardins"
+    workspace_slug: str = "copro"
     collection_name: str = "Archives Copropriété"
 
 

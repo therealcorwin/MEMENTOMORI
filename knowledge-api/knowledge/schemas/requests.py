@@ -5,20 +5,20 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 class SearchRequest(BaseModel):
-    workspace_id: uuid.UUID = Field(..., description="Identifiant unique du workspace ciblé")
+    workspace_id: str = Field(..., description="Identifiant unique (UUID ou slug) du workspace ciblé")
     query: str = Field(..., min_length=2, max_length=1000, description="Requête de recherche en langage naturel")
     top_k: int = Field(5, ge=1, le=20, description="Nombre maximum de résultats souhaités")
     trace_id: Optional[str] = Field(None, description="Identifiant de corrélation pour les logs")
 
 class AnswerRequest(BaseModel):
-    workspace_id: uuid.UUID = Field(..., description="Identifiant unique du workspace ciblé")
+    workspace_id: str = Field(..., description="Identifiant unique (UUID ou slug) du workspace ciblé")
     query: str = Field(..., min_length=2, max_length=1000, description="Question en langage naturel")
     top_k: int = Field(5, ge=1, le=10, description="Nombre de fragments documentaires injectés dans le contexte")
     use_cache: bool = Field(True, description="Active la vérification et l'invalidation du cache intelligent (§16.9)")
     trace_id: Optional[str] = Field(None, description="Identifiant de corrélation pour les logs")
 
 class IngestRequest(BaseModel):
-    workspace_slug: str = Field("copro-jardins", description="Slug du workspace destinataire")
+    workspace_slug: str = Field("copro", description="Slug du workspace destinataire")
     collection_name: str = Field("Archives Copropriété", description="Nom de la collection")
     sync_paperless: bool = Field(True, description="Déclencher la synchronisation des documents Paperless")
 

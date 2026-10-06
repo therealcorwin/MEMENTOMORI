@@ -28,7 +28,7 @@ for dt_name in DOCUMENT_TYPES:
 
 # 2. Tags par Workspace
 WORKSPACE_TAGS = [
-    ("ws:copro-jardins", "#1f77b4"),
+    ("ws:copro", "#1f77b4"),
     ("ws:finances-perso", "#2ca02c"),
     ("ws:sante", "#d62728"),
     ("ws:admin-perso", "#9467bd"),

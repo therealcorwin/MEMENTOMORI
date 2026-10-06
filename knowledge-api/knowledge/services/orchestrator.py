@@ -30,6 +30,7 @@ ANSWER_MULTI_PATH = PROMPTS_DIR / "answer_multi.txt"
 
 # Mapping canonique des workspaces vers leurs sous-agents dédiés (§8.4)
 WORKSPACE_TO_AGENT = {
+    "copro": "csbot",
     "copro-jardins": "csbot",
     "finances-perso": "agent-finances",
     "sante-perso": "agent-sante",
@@ -69,7 +70,7 @@ def fallback_classify_by_keywords(
     scores: dict[str, float] = {}
 
     keyword_maps = {
-        "copro-jardins": [
+        "copro": [
             "copro", "jardin", "syndic", "ascenseur", "otis", "charges", "ag",
             "vert avenir", "ravalement", "lot 12", "lot 42", "assemblée", "pv",
             "gardien", "chaudiere", "eau froide", "parties communes", "travaux",
@@ -106,8 +107,9 @@ def fallback_classify_by_keywords(
         ("appel de fonds" in q_lower or "charges" in q_lower) and
         ("moyens" in q_lower or "payer" in q_lower or "solde" in q_lower or "compte" in q_lower)
     )
-    if is_cross_copro_finances and "copro-jardins" in ws_by_slug and "finances-perso" in ws_by_slug:
-        scores["copro-jardins"] = max(scores.get("copro-jardins", 0.0), 0.85)
+    copro_slug = "copro" if "copro" in ws_by_slug else "copro-jardins"
+    if is_cross_copro_finances and copro_slug in ws_by_slug and "finances-perso" in ws_by_slug:
+        scores[copro_slug] = max(scores.get(copro_slug, 0.0), 0.85)
         scores["finances-perso"] = max(scores.get("finances-perso", 0.0), 0.80)
 
     if not scores:

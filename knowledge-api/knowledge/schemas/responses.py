@@ -57,10 +57,16 @@ class HealthResponse(BaseModel):
 class AuditLogItem(BaseModel):
     id: int
     principal_id: Optional[uuid.UUID] = None
+    principal_name: Optional[str] = None
+    principal_type: Optional[str] = None
     workspace_id: Optional[uuid.UUID] = None
+    workspace_name: Optional[str] = None
+    workspace_slug: Optional[str] = None
     action: str
     target_type: Optional[str] = None
     target_id: Optional[uuid.UUID] = None
+    target_name: Optional[str] = None
+    summary: Optional[str] = None
     detail: dict[str, Any] = Field(default_factory=dict)
     created_at: Optional[Any] = None
 

@@ -20,7 +20,7 @@ async def main():
     print("=" * 60)
     print("MEMENTOMORI - Adaptateur CPTCopro (Comptabilité Copropriété)")
     print("=" * 60)
-    count = await run_cptcopro_sync(workspace_slug="copro-jardins")
+    count = await run_cptcopro_sync(workspace_slug="copro")
     print(f"Synchronisation CPTCopro réussie : {count} documents financiers indexés.")
     print("=" * 60)
 

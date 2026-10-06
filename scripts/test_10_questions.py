@@ -32,12 +32,12 @@ async def run_tests() -> None:
     print("    TEST DES 10 QUESTIONS PILOTES (Task 3.15)    ")
     print("==================================================")
 
-    # Récupérer l'ID du workspace 'copro-jardins'
+    # Récupérer l'ID du workspace 'copro'
     async with async_session_maker() as session:
-        ws_res = await session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+        ws_res = await session.execute(select(Workspace).where(Workspace.slug == "copro"))
         workspace = ws_res.scalar_one_or_none()
         if not workspace:
-            print("ERREUR: Workspace 'copro-jardins' introuvable.")
+            print("ERREUR: Workspace 'copro' introuvable.")
             return
         workspace_id = str(workspace.id)
         print(f"Workspace actif : {workspace.name} ({workspace_id})\n")

@@ -70,7 +70,7 @@ PILOT_DOCUMENTS = [
         "filename": "reglement_copro_jardins_provence.pdf",
         "title": "Reglement de Copropriete - Les Jardins de Provence",
         "doc_type": "Règlement",
-        "tags": ["ws:copro-jardins", "scope:collectif", "sens:public"],
+        "tags": ["ws:copro", "scope:collectif", "sens:public"],
         "lines": [
             "COPROPRIETE LES JARDINS DE PROVENCE - 12 Rue des Fleurs, 13000 Marseille",
             "REGLEMENT DE COPROPRIETE ET ETAT DESCRIPTIF DE DIVISION",
@@ -99,7 +99,7 @@ PILOT_DOCUMENTS = [
         "filename": "contrat_maintenance_ascenseur_otis_2026.pdf",
         "title": "Contrat de maintenance ascenseur OTIS 2026",
         "doc_type": "Contrat",
-        "tags": ["ws:copro-jardins", "scope:cs", "sens:interne"],
+        "tags": ["ws:copro", "scope:cs", "sens:interne"],
         "lines": [
             "CONTRAT DE MAINTENANCE COMPLETE D'ASCENSEUR",
             "Ref Contrat: OTIS-MARS-2026-78492",
@@ -126,7 +126,7 @@ PILOT_DOCUMENTS = [
         "filename": "facture_vert_avenir_espaces_verts_2026_T1.pdf",
         "title": "Facture Entretien Espaces Verts - Vert Avenir T1 2026",
         "doc_type": "Facture",
-        "tags": ["ws:copro-jardins", "scope:cs", "sens:interne"],
+        "tags": ["ws:copro", "scope:cs", "sens:interne"],
         "lines": [
             "VERT AVENIR SARL - Paysagiste & Espaces Verts",
             "FACTURE N° FAC-2026-089 - Date : 15/03/2026",
@@ -152,7 +152,7 @@ PILOT_DOCUMENTS = [
         "filename": "pv_ag_ordinaire_2025_jardins_provence.pdf",
         "title": "Proces-Verbal Assemblee Generale Ordinaire 20 juin 2025",
         "doc_type": "Procès-Verbal",
-        "tags": ["ws:copro-jardins", "scope:collectif", "sens:public"],
+        "tags": ["ws:copro", "scope:collectif", "sens:public"],
         "lines": [
             "SYNDICAT DES COPROPRIETAIRES LES JARDINS DE PROVENCE",
             "PROCES-VERBAL DE L'ASSEMBLEE GENERALE ORDINAIRE DU 20 JUIN 2025",
@@ -181,7 +181,7 @@ PILOT_DOCUMENTS = [
         "filename": "declaration_sinistre_dde_lot42_fevrier2026.pdf",
         "title": "Declaration sinistre degat des eaux Lot 42 - Fevrier 2026",
         "doc_type": "Sinistre",
-        "tags": ["ws:copro-jardins", "scope:cs", "sens:interne"],
+        "tags": ["ws:copro", "scope:cs", "sens:interne"],
         "lines": [
             "DECLARATION DE SINISTRE - DEGAT DES EAUX",
             "Ref Dossier : DDE-2026-4412 / Police AXA Assurances N° 987654321",

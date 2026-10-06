@@ -6,7 +6,7 @@ Crée le Provider OAuth2, l'Application knowledge-api et le compte de service cs
 from authentik.core.models import Application, User, UserTypes
 from authentik.crypto.models import CertificateKeyPair
 from authentik.flows.models import Flow
-from authentik.providers.oauth2.models import ClientTypes, OAuth2Provider, ScopeMapping
+from authentik.providers.oauth2.models import OAuth2Provider, ScopeMapping
 
 # 1. Utilisateur Service Account csbot
 user, user_created = User.objects.get_or_create(
@@ -27,7 +27,7 @@ signing_cert = CertificateKeyPair.objects.get(name="authentik Internal JWT Certi
 provider, prov_created = OAuth2Provider.objects.get_or_create(
     name="knowledge-api",
     defaults={
-        "client_type": ClientTypes.CONFIDENTIAL,
+        "client_type": "confidential",
         "client_id": "csbot",
         "client_secret": "csbot_secret_2026_dev",
         "authorization_flow": auth_flow,
@@ -37,7 +37,7 @@ provider, prov_created = OAuth2Provider.objects.get_or_create(
 if not prov_created:
     provider.client_id = "csbot"
     provider.client_secret = "csbot_secret_2026_dev"
-    provider.client_type = ClientTypes.CONFIDENTIAL
+    provider.client_type = "confidential"
     provider.authorization_flow = auth_flow
     provider.signing_key = signing_cert
     provider.save()

@@ -22,7 +22,7 @@ async def test_rbac_three_roles_different_results(async_client, db_session):
     Tâche 5.1 & 5.5 : Vérifie que les 3 rôles (Copropriétaire, CS, Admin)
     obtiennent des résultats strictement cloisonnés par scope et sensibilité.
     """
-    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))
     ws = res.scalar_one_or_none()
     assert ws is not None
     ws_id = str(ws.id)
@@ -79,7 +79,7 @@ async def test_rbac_lot_isolation(async_client, db_session):
     """
     Tâche 5.6 : Vérifie le cloisonnement granulaire par lot privatif (lot:42).
     """
-    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))
     ws = res.scalar_one_or_none()
     ws_id = str(ws.id)
 
@@ -110,7 +110,7 @@ async def test_inter_workspace_isolation(async_client, db_session):
     Tâche 5.6 : Vérifie l'isolation stricte inter-workspaces.
     Aucun utilisateur de copro ne peut interroger sante-perso (403 Forbidden).
     """
-    res_copro = await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+    res_copro = await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))
     ws_copro = res_copro.scalar_one_or_none()
     assert ws_copro is not None
 
@@ -146,7 +146,7 @@ async def test_inter_workspace_isolation(async_client, db_session):
     titles_sante = [r["document_title"] for r in resp3.json()["results"]]
     assert "Bilan Sanguin Annuel 2026" in titles_sante
 
-    # 4. sante_user tente d'accéder à copro-jardins -> 403 Forbidden
+    # 4. sante_user tente d'accéder à copro -> 403 Forbidden
     resp4 = await async_client.post(
         "/v1/search",
         json={"workspace_id": str(ws_copro.id), "query": "règlement"},
@@ -189,7 +189,7 @@ async def test_secret_fragment_cloud_leak_prevention(async_client, db_session):
             assert "9876" in resp.answer
 
     # 2. Test d'intégration API : /v1/answer avec admin_user sur le document secret
-    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))
     ws_id = str(res.scalar_one_or_none().id)
 
     ans_resp = await async_client.post(
@@ -213,7 +213,7 @@ async def test_audit_log_recording_and_endpoint(async_client, db_session):
     Tâche 5.4 : Vérifie que les actions (search, answer) sont bien enregistrées
     dans audit_log et consultables via GET /v1/admin/audit avec contrôle RBAC.
     """
-    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))
     ws_id = str(res.scalar_one_or_none().id)
 
     # 1. Effectuer une recherche avec admin_user

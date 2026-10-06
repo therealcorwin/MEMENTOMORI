@@ -12,7 +12,20 @@ export interface DocumentFilters {
 export const documentsApi = {
   list: async (filters: DocumentFilters = {}): Promise<PaginatedResponse<Document>> => {
     const { data } = await apiClient.get('/admin/documents', { params: filters })
-    return data
+    if (Array.isArray(data)) {
+      return {
+        items: data,
+        total: data.length,
+        limit: filters.limit ?? 50,
+        offset: filters.offset ?? 0,
+      }
+    }
+    return {
+      items: Array.isArray(data?.items) ? data.items : [],
+      total: data?.total ?? (data?.items?.length || 0),
+      limit: data?.limit ?? filters.limit ?? 50,
+      offset: data?.offset ?? filters.offset ?? 0,
+    }
   },
 
   get: async (id: string): Promise<DocumentDetail> => {

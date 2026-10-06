@@ -42,7 +42,7 @@ async def search_documents(
     results = await hybrid_search(
         query=req.query,
         query_embedding=query_emb,
-        workspace_ids=[req.workspace_id],
+        workspace_ids=[auth_ctx.workspace.id],
         allowed_scopes=auth_ctx.allowed_scopes,
         max_sensitivity=auth_ctx.max_sensitivity,
         db=db,
@@ -52,10 +52,10 @@ async def search_documents(
     # 3. Journal d'audit (§14.12)
     audit = AuditLog(
         principal_id=auth_ctx.principal.id,
-        workspace_id=req.workspace_id,
+        workspace_id=auth_ctx.workspace.id,
         action="search",
         target_type="workspace",
-        target_id=req.workspace_id,
+        target_id=auth_ctx.workspace.id,
         detail={
             "query": req.query,
             "results_count": len(results),

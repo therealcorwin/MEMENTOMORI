@@ -36,7 +36,7 @@ async def test_docs_protection(async_client):
 @pytest.mark.asyncio
 async def test_search_and_answer_with_dev_principal(async_client, db_session):
     # Récupérer un workspace
-    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro-jardins"))
+    res = await db_session.execute(select(Workspace).where(Workspace.slug == "copro"))
     ws = res.scalar_one_or_none()
     assert ws is not None
     ws_id = str(ws.id)

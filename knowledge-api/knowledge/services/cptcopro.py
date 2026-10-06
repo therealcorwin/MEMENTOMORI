@@ -102,7 +102,7 @@ CPTCOPRO_FINANCIAL_RECORDS = [
 
 
 async def run_cptcopro_sync(
-    workspace_slug: str = "copro-jardins",
+    workspace_slug: str = "copro",
     db: Optional[AsyncSession] = None
 ) -> int:
     """Synchronise et indexe les finances de CPTCopro dans knowledge-api."""

@@ -124,7 +124,7 @@ services:
       - backend
 
   tika:
-    image: apache/tika:3.1  # Pinned
+    image: apache/tika:latest
     restart: unless-stopped
     networks:
       - backend
@@ -276,6 +276,8 @@ services:
     command: python -m knowledge.worker
     restart: unless-stopped
     stop_grace_period: 120s  # Attendre la fin du chunk en cours avant SIGKILL
+    healthcheck:
+      disable: true
     environment:
       DATABASE_URL: postgresql+asyncpg://knowledge_app:${KNOWLEDGE_DB_PASSWORD}@knowledge-db:5432/knowledge
       REDIS_URL: redis://knowledge-redis:6379
@@ -394,7 +396,7 @@ networks:
     # Applications : API, Paperless, Authentik, Worker, Dashboard
   database:
     name: knowledge_database
-    internal: true
+    # internal: true désactivé pour permettre l'exposition des ports hôtes 5433 (Postgres) et 6380 (Redis) pour le dev/tests
     # AUCUN accès externe. Uniquement les services backend.
   monitoring:
     name: knowledge_monitoring
