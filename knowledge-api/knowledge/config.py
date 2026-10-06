@@ -1,9 +1,11 @@
 """Configuration de knowledge-api via Pydantic Settings."""
 
+import json
 import os
 from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -47,9 +49,18 @@ class Settings(BaseSettings):
     AUTHENTIK_AUDIENCE: str = "knowledge-api"
 
     # Sécurité & Documentation (§16.11)
-    CORS_ORIGINS: List[str] = ["*"]
+    # Accepte : "*" | "https://a.com" | "https://a.com,https://b.com"
+    CORS_ORIGINS: str = "*"
     DOCS_USERNAME: str = "admin"
     DOCS_PASSWORD: str = ""
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Parse CORS_ORIGINS en liste (CSV ou valeur unique)."""
+        val = self.CORS_ORIGINS.strip()
+        if val.startswith("["):
+            return json.loads(val)
+        return [item.strip() for item in val.split(",") if item.strip()]
 
     def model_post_init(self, __context) -> None:
         if not self.DATABASE_URL:
