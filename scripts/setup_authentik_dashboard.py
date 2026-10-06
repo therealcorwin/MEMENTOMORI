@@ -3,6 +3,7 @@ Configuration OAuth2 / OIDC dans Authentik pour le Frontend Knowledge Dashboard 
 Crée le Provider OAuth2 public (PKCE) et l'Application knowledge-dashboard.
 """
 
+from authentik.core.apps import Setup
 from authentik.core.models import Application
 from authentik.crypto.models import CertificateKeyPair
 from authentik.flows.models import Flow
@@ -21,6 +22,9 @@ from authentik.providers.oauth2.models import (
 print("=" * 70)
 print("Configuration Authentik OIDC pour knowledge-dashboard (Sprint 8)")
 print("=" * 70)
+
+# 0. S'assurer que le Setup initial d'Authentik est validé
+Setup.set(True)
 
 # 1. Flux d'autorisation et certificat de signature
 auth_flow = Flow.objects.get(slug="default-provider-authorization-implicit-consent")
