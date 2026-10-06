@@ -85,7 +85,8 @@ services:
     image: ghcr.io/paperless-ngx/paperless-ngx:2.14  # Pinned
     restart: unless-stopped
     depends_on: [paperless-db, paperless-redis, gotenberg, tika]
-    # PAS de ports: exposé uniquement via Traefik
+    ports:
+      - "8000:8000"  # Accès direct local
     environment:
       PAPERLESS_REDIS: redis://paperless-redis:6379
       PAPERLESS_DBHOST: paperless-db
@@ -155,7 +156,8 @@ services:
     image: ghcr.io/goauthentik/server:2026.8.3  # Pinned
     restart: unless-stopped
     command: server
-    # PAS de ports: exposé uniquement via Traefik
+    ports:
+      - "9000:9000"  # Accès direct local
     environment:
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_POSTGRESQL__HOST: authentik-db
@@ -296,6 +298,8 @@ services:
   uptime-kuma:
     image: louislam/uptime-kuma:1
     restart: unless-stopped
+    ports:
+      - "3001:3001"  # Accès direct local
     volumes:
       - uptime_kuma_data:/app/data
     networks:
@@ -313,6 +317,8 @@ services:
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
+    ports:
+      - "9090:9090"  # Accès direct local
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -327,6 +333,8 @@ services:
   grafana:
     image: grafana/grafana:latest
     restart: unless-stopped
+    ports:
+      - "3003:3000"  # Accès direct local (3000 occupé par playwright)
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
@@ -350,12 +358,15 @@ services:
   loki:
     image: grafana/loki:3.5
     restart: unless-stopped
+    ports:
+      - "3100:3100"  # API direct local
     volumes:
       - ./monitoring/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki_data:/loki
     command: -config.file=/etc/loki/loki-config.yml
     networks:
       - monitoring
+      - backend
 
   # --- Promtail (collecte logs Docker → Loki) ---
   promtail:
@@ -377,6 +388,8 @@ services:
       context: ./knowledge-dashboard
       dockerfile: Dockerfile
     restart: unless-stopped
+    ports:
+      - "8080:80"  # Accès direct local UI
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.dashboard.rule=Host(`dashboard.${DOMAIN}`)"
