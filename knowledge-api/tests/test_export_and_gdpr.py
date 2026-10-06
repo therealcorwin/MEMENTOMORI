@@ -3,7 +3,7 @@
 import pytest
 import uuid
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledge.models import (
@@ -13,6 +13,7 @@ from knowledge.models import (
     Document,
     DocumentVersion,
     Fragment,
+    AuditLog,
 )
 
 
@@ -88,27 +89,38 @@ async def test_admin_gdpr_anonymization(async_client: AsyncClient, db_session: A
     db_session.add(frag)
     await db_session.commit()
 
-    # Appel d'anonymisation
-    resp = await async_client.post(
-        "/v1/admin/gdpr/anonymize",
-        json={
-            "target_pattern": "M. Jean Dupont",
-            "replacement": "[Copropriétaire anonymisé]",
-            "workspace_id": str(ws.id),
-        },
-        headers=headers,
-    )
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["status"] == "success"
-    assert data["fragments_anonymized"] >= 1
-    assert data["cache_cleared"] is True
+    try:
+        # Appel d'anonymisation
+        resp = await async_client.post(
+            "/v1/admin/gdpr/anonymize",
+            json={
+                "target_pattern": "M. Jean Dupont",
+                "replacement": "[Copropriétaire anonymisé]",
+                "workspace_id": str(ws.id),
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "success"
+        assert data["fragments_anonymized"] >= 1
+        assert data["cache_cleared"] is True
 
-    # Vérification que le fragment en base est bien anonymisé
-    frag_id = frag.id
-    res = await db_session.execute(
-        select(Fragment.content).execution_options(populate_existing=True).where(Fragment.id == frag_id)
-    )
-    content = res.scalar_one()
-    assert "[Copropriétaire anonymisé]" in content
-    assert "M. Jean Dupont" not in content
+        # Vérification que le fragment en base est bien anonymisé
+        frag_id = frag.id
+        res = await db_session.execute(
+            select(Fragment.content).execution_options(populate_existing=True).where(Fragment.id == frag_id)
+        )
+        content = res.scalar_one()
+        assert "[Copropriétaire anonymisé]" in content
+        assert "M. Jean Dupont" not in content
+    finally:
+        # Nettoyage systématique du workspace et des artefacts de test
+        await db_session.execute(delete(AuditLog).where(AuditLog.workspace_id == ws.id))
+        await db_session.execute(delete(Fragment).where(Fragment.document_version_id == doc_ver.id))
+        await db_session.execute(delete(DocumentVersion).where(DocumentVersion.id == doc_ver.id))
+        await db_session.execute(delete(Document).where(Document.id == doc.id))
+        await db_session.execute(delete(CollectionWorkspace).where(CollectionWorkspace.workspace_id == ws.id))
+        await db_session.execute(delete(Collection).where(Collection.id == col.id))
+        await db_session.execute(delete(Workspace).where(Workspace.id == ws.id))
+        await db_session.commit()
