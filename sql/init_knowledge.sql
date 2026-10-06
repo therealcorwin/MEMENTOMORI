@@ -195,7 +195,7 @@ CREATE TABLE feedback (
 );
 CREATE INDEX idx_feedback_rating ON feedback(rating, created_at DESC);
 
--- Cache intelligent de réponses (§16.9)
+-- Cache intelligent et sémantique de réponses (§16.9, B13)
 CREATE TABLE answer_cache (
     id              BIGSERIAL PRIMARY KEY,
     question_hash   VARCHAR(64) NOT NULL,
@@ -205,12 +205,14 @@ CREATE TABLE answer_cache (
     confidence      VARCHAR(16),
     model           VARCHAR(64),
     sources_json    JSONB NOT NULL,
+    embedding       vector(768),
     hit_count       INTEGER DEFAULT 0,
     created_at      TIMESTAMPTZ DEFAULT now(),
     last_hit_at     TIMESTAMPTZ
 );
 CREATE UNIQUE INDEX idx_cache_hash_ws ON answer_cache(question_hash, workspace_id);
 CREATE INDEX idx_cache_hits ON answer_cache(hit_count DESC);
+CREATE INDEX idx_cache_embedding ON answer_cache USING hnsw (embedding vector_cosine_ops);
 
 -- Liaison cache ↔ documents pour invalidation automatique (§16.9)
 CREATE TABLE answer_cache_deps (

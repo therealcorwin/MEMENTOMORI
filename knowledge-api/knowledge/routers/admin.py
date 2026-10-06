@@ -9,7 +9,8 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import json
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select, func, and_, or_, delete, update, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -739,6 +740,10 @@ def generate_audit_summary(action: str, target_type: Optional[str], detail: dict
     elif action == "ingest":
         title = detail.get("title") or "document"
         return f"Indexation du document « {title} »"
+    elif action == "export_knowledge_base":
+        return f"Export global de la base ({detail.get('documents_count', 0)} documents, {detail.get('fragments_count', 0)} fragments)"
+    elif action == "gdpr_anonymization":
+        return f"Anonymisation RGPD ({detail.get('fragments_updated', 0)} fragments anonymisés)"
 
     if q:
         return f"{action} : « {q} »"
@@ -856,3 +861,342 @@ async def get_audit_logs(
         offset=offset,
         items=items
     )
+
+
+# =====================================================================
+# 8. EXPORT & PORTABILITÉ GLOBALE (§17 B6)
+# =====================================================================
+@router.get("/admin/export")
+async def export_knowledge_base(
+    workspace_id: Optional[uuid.UUID] = Query(None, description="Filtrer par workspace"),
+    include_fragments: bool = Query(True, description="Inclure les extraits textuels des fragments"),
+    format: str = Query("json", pattern="^(json|download)$"),
+    admin: Principal = Depends(require_admin_access),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Exporte l'intégralité ou un sous-ensemble de la base de connaissances (B6).
+    Supporte les formats JSON direct et fichier téléchargeable.
+    """
+    # 1. Workspaces
+    ws_query = select(Workspace)
+    if workspace_id:
+        ws_query = ws_query.where(Workspace.id == workspace_id)
+    workspaces = (await db.execute(ws_query)).scalars().all()
+
+    ws_ids = [w.id for w in workspaces]
+    if not ws_ids:
+        raise HTTPException(status_code=404, detail="Aucun workspace trouvé pour cet export.")
+
+    # 2. Collections
+    col_query = (
+        select(Collection)
+        .join(CollectionWorkspace, Collection.id == CollectionWorkspace.collection_id)
+        .where(CollectionWorkspace.workspace_id.in_(ws_ids))
+        .distinct()
+    )
+    collections = (await db.execute(col_query)).scalars().all()
+    col_ids = [c.id for c in collections]
+
+    # 3. Documents
+    doc_query = (
+        select(Document)
+        .where(and_(Document.collection_id.in_(col_ids), Document.is_active == True))  # noqa: E712
+    )
+    documents = (await db.execute(doc_query)).scalars().all()
+    doc_ids = [d.id for d in documents]
+
+    # 4. Versions et Fragments
+    fragments_by_doc: dict[str, list[dict[str, Any]]] = {}
+    total_frags = 0
+
+    if include_fragments and doc_ids:
+        frag_query = (
+            select(Fragment, DocumentVersion.document_id)
+            .join(DocumentVersion, Fragment.document_version_id == DocumentVersion.id)
+            .where(DocumentVersion.document_id.in_(doc_ids))
+            .order_by(Fragment.chunk_index)
+        )
+        frag_rows = (await db.execute(frag_query)).all()
+        total_frags = len(frag_rows)
+        for f, d_id in frag_rows:
+            d_key = str(d_id)
+            if d_key not in fragments_by_doc:
+                fragments_by_doc[d_key] = []
+            fragments_by_doc[d_key].append({
+                "chunk_index": f.chunk_index,
+                "page_number": f.page_number,
+                "content": f.content,
+                "context_prefix": f.context_prefix,
+                "citation_ref": f.citation_ref or {},
+            })
+
+    # 5. Policies
+    pol_query = select(Policy).where(Policy.workspace_id.in_(ws_ids))
+    policies = (await db.execute(pol_query)).scalars().all()
+
+    # Structuration du dump exporté
+    export_payload = {
+        "version": "1.0",
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "exported_by": admin.external_id,
+        "summary": {
+            "workspaces_count": len(workspaces),
+            "collections_count": len(collections),
+            "documents_count": len(documents),
+            "fragments_count": total_frags,
+        },
+        "workspaces": [
+            {
+                "id": str(w.id),
+                "name": w.name,
+                "slug": w.slug,
+                "domain": w.domain,
+                "description": (w.settings or {}).get("description"),
+                "settings": w.settings,
+            }
+            for w in workspaces
+        ],
+        "collections": [
+            {
+                "id": str(c.id),
+                "name": c.name,
+                "classification": c.classification,
+            }
+            for c in collections
+        ],
+        "documents": [
+            {
+                "id": str(d.id),
+                "title": d.title,
+                "collection_id": str(d.collection_id),
+                "scope": d.scope,
+                "sensitivity": d.sensitivity,
+                "status": d.status,
+                "version": d.version,
+                "file_type": (d.metadata_ or {}).get("file_type") or (d.metadata_ or {}).get("extension") or "pdf",
+                "sha256": d.content_hash,
+                "external_id": (d.metadata_ or {}).get("external_id"),
+                "metadata": d.metadata_ or {},
+                "created_at": d.created_at.isoformat() if d.created_at else None,
+                "fragments": fragments_by_doc.get(str(d.id), []) if include_fragments else None,
+            }
+            for d in documents
+        ],
+        "policies": [
+            {
+                "principal_id": str(p.principal_id),
+                "workspace_id": str(p.workspace_id) if p.workspace_id else None,
+                "role": p.role,
+                "allowed_scopes": p.allowed_scopes,
+                "actions": p.actions,
+                "max_sensitivity": p.max_sensitivity,
+            }
+            for p in policies
+        ],
+    }
+
+    # Journalisation de l'export
+    db.add(AuditLog(
+        principal_id=admin.id,
+        workspace_id=workspaces[0].id if workspaces else None,
+        action="export_knowledge_base",
+        target_type="system",
+        detail={
+            "workspaces_count": len(workspaces),
+            "documents_count": len(documents),
+            "fragments_count": total_frags,
+            "format": format,
+        }
+    ))
+    await db.commit()
+
+    if format == "download":
+        json_bytes = json.dumps(export_payload, default=str, indent=2, ensure_ascii=False).encode("utf-8")
+        timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        filename = f"mementomori_export_{timestamp_str}.json"
+        return Response(
+            content=json_bytes,
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    return export_payload
+
+
+# =====================================================================
+# 9. RGPD : RÉTENTION DOCUMENTAIRE & ANONYMISATION (§17 B5)
+# =====================================================================
+class GdprAnonymizeRequest(BaseModel):
+    target_pattern: str = Field(..., min_length=2, description="Mot, nom ou identifiant à anonymiser")
+    replacement: str = Field("[Donnée personnelle anonymisée]", description="Chaîne de remplacement")
+    workspace_id: Optional[uuid.UUID] = None
+    document_id: Optional[uuid.UUID] = None
+
+
+@router.get("/admin/gdpr/retention")
+async def audit_retention_rules(
+    workspace_id: Optional[uuid.UUID] = Query(None, description="Filtrer par workspace"),
+    admin: Principal = Depends(require_admin_access),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Audit de conformité de rétention documentaire selon les durées légales françaises (§17 B5).
+    - Règlements / EDD : conservation permanente
+    - PV d'AG : 10 ans (loi 1965)
+    - Factures / Comptabilité : 10 ans (Code de commerce)
+    - Feuilles de présence : 5 ans
+    - Devis / Courriers : 3 ans
+    """
+    doc_query = select(Document).where(Document.is_active == True)  # noqa: E712
+    if workspace_id:
+        doc_query = (
+            doc_query
+            .join(Collection, Document.collection_id == Collection.id)
+            .join(CollectionWorkspace, Collection.id == CollectionWorkspace.collection_id)
+            .where(CollectionWorkspace.workspace_id == workspace_id)
+        )
+
+    docs = (await db.execute(doc_query)).scalars().all()
+    now = datetime.now(timezone.utc)
+
+    # Définition des règles légales de rétention
+    retention_rules = [
+        {"type": "reglement_copro", "label": "Règlements & État descriptif", "legal_years": "permanent"},
+        {"type": "pv_ag", "label": "Procès-Verbaux d'Assemblée Générale", "legal_years": 10},
+        {"type": "facture", "label": "Factures & Pièces Comptables", "legal_years": 10},
+        {"type": "feuille_presence", "label": "Feuilles de présence d'AG", "legal_years": 5},
+        {"type": "devis", "label": "Devis et courriers ordinaires", "legal_years": 3},
+    ]
+
+    items = []
+    eligible_for_archive_count = 0
+
+    for d in docs:
+        doc_type = ((d.metadata_ or {}).get("file_type") or "").lower()
+        title_lower = (d.title or "").lower()
+        created_at = d.created_at or now
+        age_days = (now - created_at).days
+        age_years = round(age_days / 365.25, 2)
+
+        # Détermination de la durée légale applicable
+        if "reglement" in title_lower or "edd" in title_lower:
+            rule_type = "reglement_copro"
+            limit_years = None
+            is_permanent = True
+        elif "ag" in title_lower or "assemblee" in title_lower or "pv" in title_lower:
+            rule_type = "pv_ag"
+            limit_years = 10
+            is_permanent = False
+        elif "facture" in title_lower or "compta" in title_lower or "grand livre" in title_lower:
+            rule_type = "facture"
+            limit_years = 10
+            is_permanent = False
+        elif "presence" in title_lower:
+            rule_type = "feuille_presence"
+            limit_years = 5
+            is_permanent = False
+        else:
+            rule_type = "devis"
+            limit_years = 3
+            is_permanent = False
+
+        is_expired = False
+        if not is_permanent and limit_years and age_years > limit_years:
+            is_expired = True
+            eligible_for_archive_count += 1
+
+        items.append({
+            "document_id": str(d.id),
+            "title": d.title,
+            "created_at": created_at.isoformat(),
+            "age_years": age_years,
+            "rule_type": rule_type,
+            "retention_years": "permanent" if is_permanent else limit_years,
+            "status": "eligible_archivage" if is_expired else "conforme",
+        })
+
+    return {
+        "retention_rules": retention_rules,
+        "total_documents_checked": len(docs),
+        "compliant_count": len(docs) - eligible_for_archive_count,
+        "eligible_for_archive_count": eligible_for_archive_count,
+        "items": items,
+    }
+
+
+@router.post("/admin/gdpr/anonymize")
+async def anonymize_personal_data(
+    req: GdprAnonymizeRequest,
+    admin: Principal = Depends(require_admin_access),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """
+    Droit à l'effacement et anonymisation de données personnelles (§17 B5).
+    Recherche et remplace les occurrences nominatives dans les fragments et purge le cache.
+    """
+    pattern = req.target_pattern.strip()
+    if len(pattern) < 2:
+        raise HTTPException(status_code=400, detail="Le motif à anonymiser doit comporter au moins 2 caractères.")
+
+    # 1. Recherche des fragments cibles
+    frag_query = select(Fragment).where(Fragment.content.ilike(f"%{pattern}%"))
+
+    if req.document_id:
+        frag_query = (
+            frag_query
+            .join(DocumentVersion, Fragment.document_version_id == DocumentVersion.id)
+            .where(DocumentVersion.document_id == req.document_id)
+        )
+    elif req.workspace_id:
+        frag_query = (
+            frag_query
+            .join(DocumentVersion, Fragment.document_version_id == DocumentVersion.id)
+            .join(Document, DocumentVersion.document_id == Document.id)
+            .join(Collection, Document.collection_id == Collection.id)
+            .join(CollectionWorkspace, Collection.id == CollectionWorkspace.collection_id)
+            .where(CollectionWorkspace.workspace_id == req.workspace_id)
+        )
+
+    matched_frags = (await db.execute(frag_query)).scalars().all()
+    count = len(matched_frags)
+
+    # 2. Remplacement et réindexation
+    import re
+    compiled_re = re.compile(re.escape(pattern), re.IGNORECASE)
+
+    for frag in matched_frags:
+        frag.content = compiled_re.sub(req.replacement, frag.content)
+        # Régénération du vecteur textuel PostgreSQL
+        frag.search_vector = func.to_tsvector("french", frag.content)
+
+    # 3. Invalidation du cache de réponses
+    if req.workspace_id:
+        await db.execute(delete(AnswerCache).where(AnswerCache.workspace_id == req.workspace_id))
+    else:
+        await db.execute(delete(AnswerCache))
+
+    # 4. Traçage dans l'audit log
+    db.add(AuditLog(
+        principal_id=admin.id,
+        workspace_id=req.workspace_id,
+        action="gdpr_anonymization",
+        target_type="system",
+        detail={
+            "fragments_updated": count,
+            "replacement": req.replacement,
+            "document_id": str(req.document_id) if req.document_id else None,
+            "workspace_id": str(req.workspace_id) if req.workspace_id else None,
+        }
+    ))
+
+    await db.commit()
+
+    logger.info("gdpr_anonymization_completed", fragments_count=count, pattern_len=len(pattern))
+    return {
+        "status": "success",
+        "fragments_anonymized": count,
+        "cache_cleared": True,
+        "replacement": req.replacement,
+    }
+

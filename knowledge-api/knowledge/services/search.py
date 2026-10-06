@@ -14,6 +14,7 @@ from knowledge.models import (
     Collection,
     CollectionWorkspace
 )
+from knowledge.services.reranker import rerank_candidates
 
 logger = get_logger(__name__)
 
@@ -41,6 +42,7 @@ async def hybrid_search(
     db: AsyncSession,
     top_k: int = 5,
     rrf_k: int = 60,
+    use_reranker: bool = True,
 ) -> List[SearchResult]:
     """
     Exécute une recherche hybride (pgvector cosine + full-text french)
@@ -156,12 +158,13 @@ async def hybrid_search(
             details[f_id] = row
 
     # Tri par score RRF décroissant
-    sorted_ids = sorted(scores.keys(), key=lambda fid: scores[fid], reverse=True)[:top_k]
+    candidate_limit = max(top_k * 2, 10) if use_reranker else top_k
+    sorted_ids = sorted(scores.keys(), key=lambda fid: scores[fid], reverse=True)[:candidate_limit]
 
-    results: List[SearchResult] = []
+    candidates: List[SearchResult] = []
     for f_id in sorted_ids:
         row = details[f_id]
-        results.append(
+        candidates.append(
             SearchResult(
                 fragment_id=row.frag_id,
                 document_id=row.doc_id,
@@ -176,6 +179,12 @@ async def hybrid_search(
                 scope=row.scope
             )
         )
+
+    # 4. Reranker Cross-Encoder (§16.6, §17 B12)
+    if use_reranker and candidates:
+        results = await rerank_candidates(query=query, candidates=candidates, top_k=top_k)
+    else:
+        results = candidates[:top_k]
 
     logger.info("hybrid_search_completed", total_found=len(results), top_score=results[0].score if results else 0)
     return results

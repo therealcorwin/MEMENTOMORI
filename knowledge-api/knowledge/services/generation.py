@@ -21,6 +21,7 @@ from knowledge.services.llm_resilience import (
     LLMResponse,
 )
 from knowledge.services.search import SearchResult
+from knowledge.services.grounding import verify_grounding
 
 logger = get_logger(__name__)
 
@@ -121,6 +122,24 @@ async def generate_grounded_answer(
         search_scores=scores
     )
 
+    # 3b. Vérification de Grounding post-LLM & Anti-Hallucination (§17 B11)
+    grounding_res = verify_grounding(
+        answer=llm_resp.answer,
+        fragments=fragments,
+        strict_threshold=0.80
+    )
+
+    final_warning = llm_resp.warning
+    final_confidence = llm_resp.confidence
+
+    if not grounding_res.is_grounded:
+        if not final_warning:
+            final_warning = grounding_res.warning
+        else:
+            final_warning = f"{final_warning} | {grounding_res.warning}"
+        if final_confidence:
+            final_confidence = round(min(final_confidence, max(0.5, grounding_res.grounding_score)), 2)
+
     # 4. Enregistrement des métriques Prometheus (§14.13)
     ws_id_str = str(workspace_id)
     try:
@@ -137,14 +156,13 @@ async def generate_grounded_answer(
         ).observe(llm_resp.latency_ms / 1000.0)
         llm_tokens_total.labels(provider=llm_resp.provider, model=llm_resp.model, direction="input").inc(llm_resp.tokens_input)
         llm_tokens_total.labels(provider=llm_resp.provider, model=llm_resp.model, direction="output").inc(llm_resp.tokens_output)
-        if llm_resp.confidence is not None:
-            llm_confidence_score.labels(workspace=ws_id_str).observe(float(llm_resp.confidence))
+        if final_confidence is not None:
+            llm_confidence_score.labels(workspace=ws_id_str).observe(float(final_confidence))
     except Exception as metric_err:
         logger.warning("failed_to_record_llm_metrics", error=str(metric_err))
 
     # 4b. Enregistrement de la métrique d'usage dans llm_usage (§14.10)
     try:
-        # Coût approximatif Gemini Flash : ~0.075$ / 1M tokens in, 0.30$ / 1M tokens out
         cost_in = (llm_resp.tokens_input / 1_000_000.0) * 0.075
         cost_out = (llm_resp.tokens_output / 1_000_000.0) * 0.30
         total_cost = Decimal(str(round(cost_in + cost_out, 6)))
@@ -159,7 +177,7 @@ async def generate_grounded_answer(
             tokens_output=llm_resp.tokens_output,
             estimated_cost=total_cost,
             latency_ms=llm_resp.latency_ms,
-            confidence=str(llm_resp.confidence)
+            confidence=str(final_confidence)
         )
         db.add(usage)
         await db.commit()
@@ -172,11 +190,13 @@ async def generate_grounded_answer(
 
     return {
         "answer": llm_resp.answer,
-        "confidence": llm_resp.confidence,
+        "confidence": final_confidence,
         "sources": sources,
         "citations": citations,
         "limits": None,
         "model": llm_resp.model,
         "provider": llm_resp.provider,
-        "warning": llm_resp.warning
+        "warning": final_warning,
+        "grounding_score": grounding_res.grounding_score,
+        "grounding_verified": grounding_res.is_grounded,
     }

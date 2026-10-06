@@ -1,15 +1,39 @@
-"""Service de cache intelligent lié aux versions de documents (§16.9, Task 3.11)."""
+"""Service de cache intelligent et sémantique lié aux versions de documents (§16.9, §17 B13)."""
 
 import hashlib
 import uuid
 from typing import Any, List, Optional, Tuple
-from sqlalchemy import select, delete, update, func
+from sqlalchemy import select, delete, update, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledge.logging import get_logger
 from knowledge.models import AnswerCache, AnswerCacheDeps, Document
 
 logger = get_logger(__name__)
+
+
+class CacheLookupResult(tuple):
+    """Résultat de consultation de cache, rétrocompatible avec le déballage 3-tuple."""
+
+    answer: str
+    confidence: str
+    sources_json: dict[str, Any]
+    cache_type: str
+
+    def __new__(
+        cls,
+        answer: str,
+        confidence: str,
+        sources_json: dict[str, Any],
+        cache_type: str = "exact",
+    ):
+        t = super().__new__(cls, (answer, confidence, sources_json))
+        t.answer = answer
+        t.confidence = confidence
+        t.sources_json = sources_json
+        t.cache_type = cache_type
+        return t
+
 
 class AnswerCacheService:
     def __init__(self, db: AsyncSession):
@@ -26,28 +50,68 @@ class AnswerCacheService:
         self,
         question: str,
         workspace_id: uuid.UUID,
-        mode: str = "answer"
-    ) -> Optional[Tuple[str, str, dict[str, Any]]]:
+        mode: str = "answer",
+        query_embedding: Optional[List[float]] = None,
+        semantic_threshold: float = 0.95,
+    ) -> Optional[CacheLookupResult]:
         """
-        Recherche une réponse en cache et vérifie l'invalidation par version (§16.9).
-        Retourne (answer, confidence, sources_json) ou None si miss/invalidé.
+        Recherche une réponse en cache avec double niveau :
+        1. Cache exact SHA-256 (O(1), §16.9)
+        2. Cache sémantique vectoriel pgvector (similarité cosinus >= semantic_threshold, §17 B13)
+        Vérifie l'invalidation automatique par version de document.
         """
-        q_hash = self.compute_hash(question, workspace_id, mode)
+        entry: Optional[AnswerCache] = None
+        match_type = "exact"
 
+        # 1. Vérification par hash exact
+        q_hash = self.compute_hash(question, workspace_id, mode)
         stmt = select(AnswerCache).where(
             AnswerCache.question_hash == q_hash,
-            AnswerCache.workspace_id == workspace_id
+            AnswerCache.workspace_id == workspace_id,
         )
         res = await self.db.execute(stmt)
         entry = res.scalar_one_or_none()
+
+        # 2. Si miss exact et embedding disponible : recherche sémantique (§17 B13)
+        if not entry and query_embedding:
+            # Distance cosinus max = 1 - threshold (ex: 1 - 0.95 = 0.05)
+            max_distance = 1.0 - semantic_threshold
+            sem_stmt = (
+                select(
+                    AnswerCache,
+                    AnswerCache.embedding.cosine_distance(query_embedding).label("dist"),
+                )
+                .where(
+                    and_(
+                        AnswerCache.workspace_id == workspace_id,
+                        AnswerCache.embedding.is_not(None),
+                    )
+                )
+                .order_by("dist")
+                .limit(1)
+            )
+            sem_res = await self.db.execute(sem_stmt)
+            sem_row = sem_res.first()
+            if sem_row and sem_row.dist <= max_distance:
+                entry = sem_row[0]
+                match_type = "semantic"
+                logger.info(
+                    "semantic_cache_hit_found",
+                    cache_id=entry.id,
+                    similarity=round(1.0 - sem_row.dist, 4),
+                    cached_q=entry.question[:50],
+                    target_q=question[:50],
+                )
+
         if not entry:
             return None
 
-        # Vérification des dépendances documents
-        deps_stmt = select(AnswerCacheDeps, Document).join(
-            Document, AnswerCacheDeps.document_id == Document.id
-        ).where(AnswerCacheDeps.cache_id == entry.id)
-
+        # 3. Vérification des dépendances documentaires (§16.9)
+        deps_stmt = (
+            select(AnswerCacheDeps, Document)
+            .join(Document, AnswerCacheDeps.document_id == Document.id)
+            .where(AnswerCacheDeps.cache_id == entry.id)
+        )
         deps_res = await self.db.execute(deps_stmt)
         deps = deps_res.all()
 
@@ -64,19 +128,29 @@ class AnswerCacheService:
             await self.db.commit()
             return None
 
-        # Cache HIT : mise à jour des statistiques
+        # 4. Cache HIT : mise à jour des statistiques
         await self.db.execute(
             update(AnswerCache)
             .where(AnswerCache.id == entry.id)
             .values(
                 hit_count=AnswerCache.hit_count + 1,
-                last_hit_at=func.now()
+                last_hit_at=func.now(),
             )
         )
         await self.db.commit()
 
-        logger.info("cache_hit", cache_id=entry.id, hits=entry.hit_count + 1)
-        return entry.answer, entry.confidence or "high", entry.sources_json
+        logger.info(
+            "cache_hit",
+            cache_id=entry.id,
+            match_type=match_type,
+            hits=entry.hit_count + 1,
+        )
+        return CacheLookupResult(
+            answer=entry.answer,
+            confidence=entry.confidence or "high",
+            sources_json=entry.sources_json,
+            cache_type=match_type,
+        )
 
     async def set(
         self,
@@ -86,16 +160,17 @@ class AnswerCacheService:
         sources: List[dict[str, Any]],
         confidence: str = "high",
         model: str = "gemini-1.5-flash",
-        mode: str = "answer"
+        mode: str = "answer",
+        embedding: Optional[List[float]] = None,
     ) -> None:
-        """Enregistre une réponse et ses dépendances documents en cache."""
+        """Enregistre une réponse, son vecteur et ses dépendances documents en cache."""
         q_hash = self.compute_hash(question, workspace_id, mode)
 
         # Nettoyage d'une éventuelle ancienne entrée pour ce hash
         await self.db.execute(
             delete(AnswerCache).where(
                 AnswerCache.question_hash == q_hash,
-                AnswerCache.workspace_id == workspace_id
+                AnswerCache.workspace_id == workspace_id,
             )
         )
 
@@ -107,7 +182,8 @@ class AnswerCacheService:
             confidence=confidence,
             model=model,
             sources_json={"sources": sources},
-            hit_count=0
+            embedding=embedding,
+            hit_count=0,
         )
         self.db.add(entry)
         await self.db.flush()
@@ -127,9 +203,14 @@ class AnswerCacheService:
             dep = AnswerCacheDeps(
                 cache_id=entry.id,
                 document_id=doc_id,
-                document_version=version
+                document_version=version,
             )
             self.db.add(dep)
 
         await self.db.commit()
-        logger.info("cache_stored", cache_id=entry.id, doc_deps_count=len(seen_docs))
+        logger.info(
+            "cache_stored",
+            cache_id=entry.id,
+            has_embedding=embedding is not None,
+            doc_deps_count=len(seen_docs),
+        )

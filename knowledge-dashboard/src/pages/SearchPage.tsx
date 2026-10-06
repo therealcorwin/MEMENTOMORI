@@ -42,6 +42,11 @@ interface AnswerResultData {
   workspace?: string
   workspaces?: string[]
   sources?: SourceItem[]
+  cached?: boolean
+  cache_type?: string
+  warning?: string
+  grounding_score?: number
+  grounding_verified?: boolean
 }
 
 export function SearchPage() {
@@ -317,7 +322,29 @@ export function SearchPage() {
               <CardTitle className="text-base flex items-center gap-2">
                 <span>🤖</span> Synthèse et Réponse IA
               </CardTitle>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {(result as AnswerResultData).cached && (
+                  (result as AnswerResultData).cache_type === 'semantic' ? (
+                    <Badge className="bg-purple-500/10 text-purple-400 border border-purple-500/30 text-xs font-mono">
+                      🧠 Cache Sémantique
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-blue-500/10 text-blue-400 border border-blue-500/30 text-xs font-mono">
+                      ⚡ Cache Exact
+                    </Badge>
+                  )
+                )}
+                {(result as AnswerResultData).grounding_verified !== undefined && (
+                  (result as AnswerResultData).grounding_verified ? (
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-xs">
+                      🛡️ Grounding certifié
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs">
+                      ⚠️ Grounding partiel ({typeof (result as AnswerResultData).grounding_score === 'number' ? Math.round((result as AnswerResultData).grounding_score! * 100) : 0}%)
+                    </Badge>
+                  )
+                )}
                 {(result as AnswerResultData).strategy && (
                   <Badge variant="outline" className="text-xs capitalize font-mono">
                     stratégie : {(result as AnswerResultData).strategy}
@@ -342,6 +369,11 @@ export function SearchPage() {
             )}
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
+            {(result as AnswerResultData).warning && (
+              <div className="p-3 bg-amber-950/20 border border-amber-500/30 text-amber-300 text-xs rounded-md">
+                <strong>Avertissement :</strong> {(result as AnswerResultData).warning}
+              </div>
+            )}
             <div className="text-sm leading-relaxed whitespace-pre-wrap">
               {(result as AnswerResultData).answer}
             </div>

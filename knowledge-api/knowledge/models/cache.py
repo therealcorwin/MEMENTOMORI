@@ -8,6 +8,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 
 from knowledge.models.base import Base
 
@@ -26,6 +27,7 @@ class AnswerCache(Base):
     confidence: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
     model: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     sources_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    embedding: Mapped[Optional[Any]] = mapped_column(Vector(768), nullable=True)
     hit_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -41,6 +43,7 @@ class AnswerCache(Base):
     __table_args__ = (
         Index("idx_cache_hash_ws", "question_hash", "workspace_id", unique=True),
         Index("idx_cache_hits", "hit_count"),
+        Index("idx_cache_embedding", "embedding"),
     )
 
 

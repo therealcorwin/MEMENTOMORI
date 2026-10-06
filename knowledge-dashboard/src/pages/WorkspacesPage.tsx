@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { workspacesApi } from '@/api/workspaces'
 import { documentsApi } from '@/api/documents'
+import { apiClient } from '@/api/client'
 import { formatDate, statusColor, sensitivityColor } from '@/lib/utils'
 import type { Workspace, Document, DocumentDetail } from '@/types'
 
@@ -156,9 +157,27 @@ export function WorkspacesPage() {
     }
   }
 
+  const handleExportBase = async () => {
+    try {
+      const resp = await apiClient.get('/admin/export?format=download', {
+        responseType: 'blob',
+      })
+      const url = window.URL.createObjectURL(new Blob([resp.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `mementomori_export_${new Date().toISOString().slice(0, 10)}.json`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    } catch (err) {
+      console.error('Erreur export base:', err)
+      alert("Échec de l'export de la base de connaissances.")
+    }
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header avec bouton Création */}
+      {/* Header avec boutons Export et Création */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Workspaces</h1>
@@ -166,9 +185,18 @@ export function WorkspacesPage() {
             Espaces de travail isolés. Cliquez sur une carte pour voir ses documents ou gérez leur cycle de vie.
           </p>
         </div>
-        <Button onClick={() => { setIsCreateOpen(true); setCreateError(null); }} className="gap-2">
-          <span>➕</span> Nouveau Workspace
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportBase}
+            className="gap-2"
+          >
+            <span>📥</span> Exporter la base (JSON)
+          </Button>
+          <Button onClick={() => { setIsCreateOpen(true); setCreateError(null); }} className="gap-2">
+            <span>➕</span> Nouveau Workspace
+          </Button>
+        </div>
       </div>
 
       {loading && <p className="text-[hsl(var(--muted-foreground))]">Chargement…</p>}

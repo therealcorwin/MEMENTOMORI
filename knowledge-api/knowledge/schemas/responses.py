@@ -41,10 +41,13 @@ class AnswerResponse(BaseModel):
     citations: List[str]
     limits: Optional[str] = None
     cached: bool = False
+    cache_type: Optional[str] = None
     model: str
     provider: str
     warning: Optional[str] = None
     trace_id: Optional[str] = None
+    grounding_score: Optional[float] = None
+    grounding_verified: Optional[bool] = None
 
 class HealthResponse(BaseModel):
     status: str
