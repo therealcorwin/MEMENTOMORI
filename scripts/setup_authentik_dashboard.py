@@ -22,13 +22,19 @@ print("=" * 70)
 auth_flow = Flow.objects.get(slug="default-provider-authorization-implicit-consent")
 signing_cert = CertificateKeyPair.objects.get(name="authentik Internal JWT Certificate")
 
-# 2. Définition des URIs de redirection autorisées (Dev Vite + Prod Traefik)
+# 2. Définition des URIs de redirection autorisées (Dev Vite, Docker Local 8080 + Prod Traefik)
 redirect_targets = [
     ("http://localhost:5173/callback", RedirectURIType.AUTHORIZATION),
     ("http://localhost:5173/", RedirectURIType.LOGOUT),
     ("http://localhost:5173/silent-renew.html", RedirectURIType.AUTHORIZATION),
     ("http://127.0.0.1:5173/callback", RedirectURIType.AUTHORIZATION),
     ("http://127.0.0.1:5173/", RedirectURIType.LOGOUT),
+    ("http://localhost:8080/callback", RedirectURIType.AUTHORIZATION),
+    ("http://localhost:8080/", RedirectURIType.LOGOUT),
+    ("http://localhost:8080/silent-renew.html", RedirectURIType.AUTHORIZATION),
+    ("http://127.0.0.1:8080/callback", RedirectURIType.AUTHORIZATION),
+    ("http://127.0.0.1:8080/", RedirectURIType.LOGOUT),
+    ("http://127.0.0.1:8080/silent-renew.html", RedirectURIType.AUTHORIZATION),
     ("https://dashboard.localhost/callback", RedirectURIType.AUTHORIZATION),
     ("https://dashboard.localhost/", RedirectURIType.LOGOUT),
     ("https://dashboard.localhost/silent-renew.html", RedirectURIType.AUTHORIZATION),
