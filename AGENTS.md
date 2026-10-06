@@ -7,6 +7,11 @@
 - **Opérations Git sécurisées** : Ne jamais effectuer d'action Git (`commit`, `merge`, `push`, etc.) contenant ou exposant des éléments sensibles.
 - **Exclusion et non-versionnement des `.env`** : Les fichiers `.env` et leurs variantes locales ne doivent en aucun cas être versionnés dans le dépôt Git et doivent obligatoirement figurer dans le fichier `.gitignore` (seuls des fichiers modèles d'exemple sans secrets comme `.env.example` peuvent être commités).
 
+## Gestion et Préservation des Workspaces
+
+- **Interdiction de supprimer des workspaces créés par l'utilisateur** : Ne jamais supprimer ni altérer les espaces de travail (workspaces) créés par l'utilisateur ou existants en base (hors tests automatisés éphémères nettoyés dans leur propre teardown).
+- **Confirmation systématique en cas de doute** : En cas de doute sur la nature ou l'origine d'un workspace, **toujours demander confirmation explicite à l'utilisateur** avant toute action de suppression.
+
 ## Graphify Agent Instructions
 
 Maintain a Graphify knowledge graph for this workspace.
