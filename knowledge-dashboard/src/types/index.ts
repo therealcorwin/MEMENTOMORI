@@ -60,26 +60,26 @@ export interface SearchResult {
 }
 
 export interface Stats {
-  total_documents: number
-  total_fragments: number
-  total_principals: number
-  documents_pending_validation: number
-  workspaces: WorkspaceStat[]
+  workspaces: number
+  documents: number
+  fragments: number
+  pending_validation: number
+  total_cache_hits: number
+  total_estimated_llm_cost_usd: number
+  status_distribution: Record<string, number>
+  documents_by_workspace: WorkspaceDocStat[]
   recent_ingestions: RecentIngestion[]
 }
 
-export interface WorkspaceStat {
-  workspace_id: string
-  workspace_slug: string
-  workspace_name: string
-  document_count: number
-  fragment_count: number
+export interface WorkspaceDocStat {
+  slug: string
+  name: string
+  count: number
 }
 
 export interface RecentIngestion {
-  document_id: string
+  id: string
   title: string
-  workspace_slug: string
   status: DocumentStatus
   created_at: string
 }

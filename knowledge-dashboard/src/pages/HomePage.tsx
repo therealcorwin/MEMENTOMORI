@@ -37,19 +37,19 @@ export function HomePage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-3xl font-bold">{stats.total_documents}</div>
+            <div className="text-3xl font-bold">{stats.documents}</div>
             <div className="text-sm text-[hsl(var(--muted-foreground))] mt-1">Documents indexés</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-3xl font-bold text-amber-400">{stats.documents_pending_validation}</div>
+            <div className="text-3xl font-bold text-amber-400">{stats.pending_validation}</div>
             <div className="text-sm text-[hsl(var(--muted-foreground))] mt-1">En attente de validation</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-3xl font-bold">{stats.total_fragments}</div>
+            <div className="text-3xl font-bold">{stats.fragments}</div>
             <div className="text-sm text-[hsl(var(--muted-foreground))] mt-1">Fragments vectorisés</div>
           </CardContent>
         </Card>
@@ -61,26 +61,30 @@ export function HomePage() {
           <CardTitle>Documents par workspace</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={stats.workspaces} layout="vertical">
-              <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-              <YAxis
-                dataKey="workspace_slug"
-                type="category"
-                width={120}
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-              />
-              <Tooltip
-                contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 6 }}
-                labelStyle={{ color: 'hsl(var(--foreground))' }}
-              />
-              <Bar dataKey="document_count" radius={[0, 4, 4, 0]}>
-                {stats.workspaces.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {stats.documents_by_workspace.length === 0 ? (
+            <p className="text-sm text-[hsl(var(--muted-foreground))] py-4">Aucun document rattaché à un workspace.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={stats.documents_by_workspace} layout="vertical">
+                <XAxis type="number" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
+                <YAxis
+                  dataKey="slug"
+                  type="category"
+                  width={120}
+                  tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                />
+                <Tooltip
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 6 }}
+                  labelStyle={{ color: 'hsl(var(--foreground))' }}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {stats.documents_by_workspace.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -95,14 +99,13 @@ export function HomePage() {
               <p className="text-[hsl(var(--muted-foreground))] text-sm">Aucune ingestion récente.</p>
             )}
             {stats.recent_ingestions.map((ing) => (
-              <div key={ing.document_id} className="flex items-center justify-between py-2 border-b border-[hsl(var(--border))] last:border-0">
+              <div key={ing.id} className="flex items-center justify-between py-2 border-b border-[hsl(var(--border))] last:border-0">
                 <div>
                   <span className="text-sm font-medium">{ing.title}</span>
-                  <span className="ml-2 text-xs text-[hsl(var(--muted-foreground))]">{ing.workspace_slug}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className={statusColor(ing.status)}>{ing.status}</Badge>
-                  <span className="text-xs text-[hsl(var(--muted-foreground))]">{formatDate(ing.created_at)}</span>
+                  <span className="text-xs text-[hsl(var(--muted-foreground))]">{ing.created_at ? formatDate(ing.created_at) : '—'}</span>
                 </div>
               </div>
             ))}

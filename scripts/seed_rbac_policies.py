@@ -326,6 +326,46 @@ async def seed_rbac():
             session.add(frag)
             print(f"  [+] Document santé créé : '{doc_sante.title}' dans sante-perso")
 
+        # 5d. Contrat ascenseur OTIS dans copro-jardins (Test 5.1 / 5.5)
+        doc_otis = (await session.execute(
+            select(Document).where(Document.title == "Contrat de maintenance ascenseur OTIS 2026")
+        )).scalar_one_or_none()
+
+        if not doc_otis:
+            doc_otis = Document(
+                collection_id=col_copro.id,
+                title="Contrat de maintenance ascenseur OTIS 2026",
+                status="actif",
+                scope="conseil_syndical",
+                sensitivity="confidentiel",
+                is_active=True,
+                version=1
+            )
+            session.add(doc_otis)
+            await session.flush()
+
+            dv_otis = DocumentVersion(
+                document_id=doc_otis.id,
+                version_number=1,
+                extracted_text="Contrat de maintenance et entretien complet des ascenseurs OTIS 2026 pour la Residence Les Jardins. Prestataire: OTIS France. Ref: OTIS-MARS-2026-78492. Visite mensuelle obligatoire."
+            )
+            session.add(dv_otis)
+            await session.flush()
+
+            content_otis = dv_otis.extracted_text
+            emb_otis = await generate_embedding(content_otis)
+            frag_otis = Fragment(
+                document_version_id=dv_otis.id,
+                chunk_index=0,
+                page_number=1,
+                content=content_otis,
+                embedding=emb_otis,
+                context_prefix="copro-jardins > Conseil Syndical",
+                citation_ref={"document_title": doc_otis.title, "page": 1}
+            )
+            session.add(frag_otis)
+            print(f"  [+] Document OTIS créé : '{doc_otis.title}' (scope=conseil_syndical, sens=confidentiel)")
+
         await session.commit()
 
     await engine.dispose()

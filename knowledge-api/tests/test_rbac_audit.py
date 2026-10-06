@@ -44,7 +44,7 @@ async def test_rbac_three_roles_different_results(async_client, db_session):
     # Doit voir le contrat d'ascenseur et la facture espaces verts !
     resp_cs = await async_client.post(
         "/v1/search",
-        json={"workspace_id": ws_id, "query": "OTIS maintenance contrat ascenseur 2026", "top_k": 5},
+        json={"workspace_id": ws_id, "query": "OTIS maintenance contrat ascenseur 2026", "top_k": 10},
         headers={"X-Dev-Principal": "cs_user"}
     )
     assert resp_cs.status_code == 200

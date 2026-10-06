@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,7 +10,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': `${import.meta.dirname}/src`,
     },
   },
   server: {
@@ -19,7 +18,7 @@ export default defineConfig({
     proxy: {
       // Proxy API calls to knowledge-api in development
       '/v1': {
-        target: 'http://localhost:8100',
+        target: 'http://127.0.0.1:8100',
         changeOrigin: true,
       },
     },
