@@ -6,6 +6,10 @@ Crée le Provider OAuth2 public (PKCE) et l'Application knowledge-dashboard.
 from authentik.core.models import Application
 from authentik.crypto.models import CertificateKeyPair
 from authentik.flows.models import Flow
+from authentik.common.oauth.constants import (
+    GRANT_TYPE_AUTHORIZATION_CODE,
+    GRANT_TYPE_REFRESH_TOKEN,
+)
 from authentik.providers.oauth2.models import (
     OAuth2Provider,
     RedirectURI,
@@ -67,6 +71,7 @@ provider.authorization_flow = auth_flow
 provider.signing_key = signing_cert
 provider.include_claims_in_id_token = True
 provider.redirect_uris = redirect_uris
+provider.grant_types = [GRANT_TYPE_AUTHORIZATION_CODE, GRANT_TYPE_REFRESH_TOKEN]
 provider.save()
 
 # Associer les scopes standards OpenID (openid, profile, email)
