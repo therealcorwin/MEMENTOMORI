@@ -95,35 +95,29 @@ export interface AuditLog {
 }
 
 export interface LlmMetrics {
-  total_requests: number
+  total_calls: number
   total_tokens_input: number
   total_tokens_output: number
-  estimated_cost_eur: number
-  avg_latency_ms: number
-  by_provider: ProviderMetrics[]
+  average_latency_ms: number
+  calls_by_model: Record<string, number>
+  calls_by_request_type: Record<string, number>
 }
 
-export interface ProviderMetrics {
-  provider: string
-  model: string
-  request_count: number
-  tokens_input: number
-  tokens_output: number
-  estimated_cost_eur: number
-  avg_latency_ms: number
-  error_count: number
+export interface LlmCosts {
+  total_estimated_cost_usd: number
+  cost_by_workspace: Record<string, number>
 }
 
 export interface HealthStatus {
   status: 'healthy' | 'degraded' | 'down'
-  services: ServiceHealth[]
+  timestamp: string
+  services: Record<string, ServiceHealthItem>
 }
 
-export interface ServiceHealth {
-  name: string
-  status: 'up' | 'down' | 'slow'
-  latency_ms?: number
-  details?: string
+export interface ServiceHealthItem {
+  status: 'ok' | 'error' | 'warning'
+  latency_ms: number
+  error: string | null
 }
 
 export interface ApiError {

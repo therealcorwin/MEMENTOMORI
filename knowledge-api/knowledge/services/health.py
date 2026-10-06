@@ -104,8 +104,11 @@ async def check_all_services(db: AsyncSession) -> Dict[str, Any]:
     # 4. Authentik
     t0 = time.perf_counter()
     try:
-        # Extraire la base URL d'Authentik
-        base_url = settings.AUTHENTIK_ISSUER.split("/application/")[0]
+        # Extraire la base URL d'Authentik (préférer l'URL interne réseau si présente)
+        if "authentik-server" in settings.AUTHENTIK_JWKS_URL:
+            base_url = settings.AUTHENTIK_JWKS_URL.split("/application/")[0]
+        else:
+            base_url = settings.AUTHENTIK_ISSUER.split("/application/")[0]
         health_url = f"{base_url.rstrip('/')}/-/health/ready/"
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(health_url)
