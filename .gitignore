@@ -30,3 +30,13 @@ graphify-out/
 knowledge-dashboard/node_modules/
 knowledge-dashboard/dist/
 backups/
+
+# Documentation interne et rapports non indexes
+PLAN.md
+PLAN_ACTION.md
+RAPPORT_ETAPES.md
+src/architecture_base_connaissances.md
+src/KNOWLEDGE_TRANSFER.md
+eval/EVAL_REPORT.md
+knowledge-dashboard/README.md
+
