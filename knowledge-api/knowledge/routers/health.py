@@ -13,26 +13,43 @@ from knowledge.schemas import HealthResponse
 
 router = APIRouter(tags=["Health"])
 
-@router.get("/health", response_model=HealthResponse)
-async def check_health(db: AsyncSession = Depends(get_db)) -> HealthResponse:
-    """Vérifie la santé des dépendances critiques (PostgreSQL, Redis, Paperless)."""
+@router.get("/health", response_model=HealthResponse, response_model_exclude_none=True)
+async def check_health(
+    db: AsyncSession = Depends(get_db),
+    detailed: bool = False
+) -> HealthResponse:
+    """Sonde de santé pour knowledge-api.
+    
+    Par défaut (usage public / sondes) : renvoie uniquement {"status": "ok"}
+    pour empêcher toute fuite d'information sur la pile technique interne (anti-reconnaissance OWASP).
+    Si detailed=True : renvoie le détail des dépendances (diagnostic interne).
+    """
     # 1. PostgreSQL + pgvector
+    pg_ok = True
     pg_status = "ok"
     try:
         await db.execute(text("SELECT 1"))
     except Exception as e:
-        pg_status = f"error: {str(e)}"
+        pg_ok = False
+        pg_status = "error"
 
     # 2. Redis
+    redis_ok = True
     redis_status = "ok"
     try:
         r = aioredis.from_url(settings.REDIS_URL, socket_timeout=2.0)
         await r.ping()
         await r.aclose()
     except Exception as e:
-        redis_status = f"error: {str(e)}"
+        redis_ok = False
+        redis_status = "error"
 
-    # 3. Paperless-ngx
+    overall = "ok" if (pg_ok and redis_ok) else "degraded"
+
+    if not detailed:
+        return HealthResponse(status=overall)
+
+    # 3. Paperless-ngx (uniquement si detailed=True)
     paperless_status = "ok"
     try:
         url = f"{settings.PAPERLESS_URL.rstrip('/')}/api/"
@@ -40,10 +57,8 @@ async def check_health(db: AsyncSession = Depends(get_db)) -> HealthResponse:
             resp = await client.get(url)
             if resp.status_code >= 400:
                 paperless_status = f"http_{resp.status_code}"
-    except Exception as e:
-        paperless_status = f"unreachable: {str(e)}"
-
-    overall = "ok" if (pg_status == "ok" and redis_status == "ok") else "degraded"
+    except Exception:
+        paperless_status = "unreachable"
 
     return HealthResponse(
         status=overall,

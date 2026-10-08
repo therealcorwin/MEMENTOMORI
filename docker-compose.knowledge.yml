@@ -8,16 +8,36 @@ x-logging: &default-logging
     max-file: "3"
 
 services:
+  # ========== DOCKER SOCKET PROXY (Sprint 10 - Hardening §15.6) ==========
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      NETWORKS: 1
+      SERVICES: 0
+      TASKS: 0
+      INFO: 1
+      EVENTS: 1
+      PING: 1
+      VERSION: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - backend
+
   # ========== TRAEFIK (Reverse Proxy + TLS) ==========
   traefik:
-    image: traefik:v3.3
+    image: traefik:v3
     restart: unless-stopped
     command:
       - "--api.dashboard=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.traefik.address=:9002"
       # Redirect HTTP -> HTTPS
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
@@ -29,17 +49,33 @@ services:
       - "--entrypoints.metrics.address=:8080"
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:  # skylos: ignore[SKY-D331]
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # - "80:80"     # Fermé : Tout le trafic WAN passe hermétiquement par Cloudflare Tunnel
+      # - "443:443"   # Fermé : Aucune exposition WAN directe (Zéro port ouvert)
+      - "127.0.0.1:9002:9002"  # Dashboard Traefik en accès local sécurisé (localhost uniquement)
+    volumes:
       - traefik_letsencrypt:/letsencrypt
+    depends_on:
+      - docker-socket-proxy
     networks:
       - frontend
       - backend
     labels:
-      # Dashboard Traefik (optionnel, protégé par Authentik)
+      # Dashboard Traefik (Direct local sur port 9002 protégé par Basic Auth)
       - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard-local.rule=PathPrefix(`/api`) || PathPrefix(`/dashboard`)"
+      - "traefik.http.routers.traefik-dashboard-local.entrypoints=traefik"
+      - "traefik.http.routers.traefik-dashboard-local.middlewares=traefik-dashboard-auth"
+      - "traefik.http.routers.traefik-dashboard-local.service=api@internal"
+      # Middleware HTTP Basic Auth
+      - "traefik.http.middlewares.traefik-dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}"
+      # Redirection / vers /dashboard/ sur le port local 9002
+      - "traefik.http.routers.traefik-root.rule=Path(`/`)"
+      - "traefik.http.routers.traefik-root.entrypoints=traefik"
+      - "traefik.http.routers.traefik-root.middlewares=traefik-redirect-dashboard,traefik-dashboard-auth"
+      - "traefik.http.routers.traefik-root.service=api@internal"
+      - "traefik.http.middlewares.traefik-redirect-dashboard.redirectregex.regex=^https?://([^/]+)/?$$"
+      - "traefik.http.middlewares.traefik-redirect-dashboard.redirectregex.replacement=http://$${1}/dashboard/"
+      # Dashboard Traefik (externe, protégé par Authentik)
       - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.${DOMAIN}`)"
       - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
       - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
@@ -59,6 +95,16 @@ services:
       - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
       - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
       - "traefik.http.middlewares.rate-limit.ratelimit.period=1m"
+
+  # ========== CLOUDFLARE TUNNEL (Sprint 10 - Activable via profile: tunnel) ==========
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles:
+      - tunnel
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    networks:
+      - frontend
 
   # ========== PAPERLESS-NGX (GED / OCR) ==========
   paperless-redis:
@@ -264,7 +310,9 @@ services:
       - database
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.knowledge-api.rule=Host(`api.${DOMAIN}`)"
+      - "traefik.docker.network=knowledge_backend"
+      # Exposition WAN durcie : blocage absolu de /metrics (Prometheus) et des documentations OpenAPI/Swagger (/docs, /redoc, /openapi.json)
+      - "traefik.http.routers.knowledge-api.rule=Host(`api.${DOMAIN}`) && !PathPrefix(`/metrics`) && !PathPrefix(`/docs`) && !PathPrefix(`/redoc`) && !PathPrefix(`/openapi.json`)"
       - "traefik.http.routers.knowledge-api.entrypoints=websecure"
       - "traefik.http.routers.knowledge-api.tls.certresolver=letsencrypt"
       - "traefik.http.routers.knowledge-api.middlewares=security-headers@docker,rate-limit@docker"
@@ -296,7 +344,7 @@ services:
   
   # --- Uptime Kuma (surveillance uptime + alertes) ---
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    image: louislam/uptime-kuma:2
     restart: unless-stopped
     ports:
       - "3001:3001"  # Accès direct local

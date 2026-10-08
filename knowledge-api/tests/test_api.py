@@ -7,12 +7,21 @@ from knowledge.models import Workspace
 
 @pytest.mark.asyncio
 async def test_health_endpoint(async_client):
+    # 1. Sonde publique : doit masquer les composants internes par défaut (anti-reconnaissance)
     resp = await async_client.get("/health")
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] in ("ok", "degraded")
-    assert "postgres" in data
-    assert "redis" in data
+    assert "postgres" not in data
+    assert "version" not in data
+
+    # 2. Sonde détaillée : diagnostic interne
+    resp_detailed = await async_client.get("/health?detailed=true")
+    assert resp_detailed.status_code == 200
+    data_detailed = resp_detailed.json()
+    assert data_detailed["status"] in ("ok", "degraded")
+    assert "postgres" in data_detailed
+    assert "redis" in data_detailed
 
 @pytest.mark.asyncio
 async def test_unauthorized_search(async_client):

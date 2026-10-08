@@ -51,11 +51,11 @@ class AnswerResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    postgres: str
-    redis: str
-    paperless: str
-    environment: str
-    version: str
+    postgres: Optional[str] = None
+    redis: Optional[str] = None
+    paperless: Optional[str] = None
+    environment: Optional[str] = None
+    version: Optional[str] = None
 
 class AuditLogItem(BaseModel):
     id: int
