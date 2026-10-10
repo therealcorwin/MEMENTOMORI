@@ -137,8 +137,8 @@ class OllamaProvider(BaseLLMProvider):
                 "temperature": 0.2
             }
         }
-        # Timeout adapté pour l'inférence locale CPU (60s)
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=3.0)) as client:
+        # Timeout adapté pour l'inférence locale CPU / premier chargement de modèle 12B (120s)
+        async with httpx.AsyncClient(timeout=httpx.Timeout(120.0, connect=5.0)) as client:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -180,20 +180,29 @@ async def answer_with_fallback(
     start_time = time.time()
     conf = compute_confidence(search_scores, len(fragments))
 
-    # 1. Vérification de sensibilité : Interdire les fragments 'secret' vers les LLMs cloud (§5.3)
+    # 1. Vérification de sensibilité (§5.3 & Directive Souveraineté) :
+    # - 'secret' : Aucun Cloud (ni Gemini ni Mistral Cloud) -> Ollama local uniquement
+    # - 'interne' ou 'confidentiel' : Gemini INTERDIT -> Mistral (Cloud) en primaire ou Ollama local
+    # - 'public' uniquement : Gemini Cloud autorisé en primaire, puis Mistral, puis Ollama local
     has_secret_fragments = any(getattr(f, "sensitivity", "interne") == "secret" for f in fragments)
+    has_non_public_fragments = any(getattr(f, "sensitivity", "interne") != "public" for f in fragments)
 
     providers: List[tuple[BaseLLMProvider, FallbackLevel]] = []
-    
-    if not has_secret_fragments:
+
+    if has_secret_fragments:
+        logger.warning("secret_fragments_detected_bypassing_cloud_llms")
+    elif has_non_public_fragments:
+        logger.info("non_public_fragments_detected_bypassing_gemini")
+        if settings.MISTRAL_API_KEY:
+            providers.append((MistralProvider(settings.MISTRAL_API_KEY), FallbackLevel.PRIMARY))
+    else:
+        # Fragments 100% publics (ou aucun fragment fourni)
         if settings.GEMINI_API_KEY:
             providers.append((GeminiProvider(settings.GEMINI_API_KEY, settings.LLM_MODEL), FallbackLevel.PRIMARY))
         if settings.MISTRAL_API_KEY:
             providers.append((MistralProvider(settings.MISTRAL_API_KEY), FallbackLevel.SECONDARY))
-    else:
-        logger.warning("secret_fragments_detected_bypassing_cloud_llms")
 
-    # Provider local Ollama si disponible
+    # Provider local Ollama si disponible (secours ou traitement souverain)
     if await check_ollama_health():
         providers.append((OllamaProvider(), FallbackLevel.LOCAL))
 
@@ -211,7 +220,7 @@ async def answer_with_fallback(
             try:
                 t0 = time.time()
                 logger.info("attempting_llm_generation", provider=provider.name, attempt=attempt+1, level=level.value)
-                current_timeout = max(timeout, 60.0) if level == FallbackLevel.LOCAL else timeout
+                current_timeout = max(timeout, 120.0) if level == FallbackLevel.LOCAL else timeout
                 answer, tokens_in, tokens_out = await asyncio.wait_for(
                     provider.generate(system_prompt, augmented_user_query),
                     timeout=current_timeout
@@ -280,19 +289,31 @@ async def generate_with_fallback(
     temperature: float = 0.0,
     max_tokens: int = 256,
     timeout: float = 8.0,
+    sensitivity: str = "public",
 ) -> tuple[str, FallbackLevel, str]:
-    """Génération simple de texte avec cascade de résilience (Gemini -> Mistral -> Ollama)."""
+    """Génération simple de texte avec cascade de résilience selon la sensibilité."""
     providers: list[tuple[BaseLLMProvider, FallbackLevel]] = []
-    if settings.GEMINI_API_KEY:
-        providers.append((GeminiProvider(settings.GEMINI_API_KEY, settings.LLM_MODEL), FallbackLevel.PRIMARY))
-    if settings.MISTRAL_API_KEY:
-        providers.append((MistralProvider(settings.MISTRAL_API_KEY), FallbackLevel.SECONDARY))
+
+    if sensitivity == "secret":
+        logger.warning("secret_sensitivity_bypassing_cloud_llms")
+    elif sensitivity != "public":
+        # Interne ou confidentiel : Gemini exclu, Mistral en primaire
+        logger.info("non_public_sensitivity_bypassing_gemini")
+        if settings.MISTRAL_API_KEY:
+            providers.append((MistralProvider(settings.MISTRAL_API_KEY), FallbackLevel.PRIMARY))
+    else:
+        # Public : Gemini autorisé en primaire
+        if settings.GEMINI_API_KEY:
+            providers.append((GeminiProvider(settings.GEMINI_API_KEY, settings.LLM_MODEL), FallbackLevel.PRIMARY))
+        if settings.MISTRAL_API_KEY:
+            providers.append((MistralProvider(settings.MISTRAL_API_KEY), FallbackLevel.SECONDARY))
+
     if await check_ollama_health():
         providers.append((OllamaProvider(), FallbackLevel.LOCAL))
 
     for provider, level in providers:
         try:
-            current_timeout = max(timeout, 60.0) if level == FallbackLevel.LOCAL else timeout
+            current_timeout = max(timeout, 120.0) if level == FallbackLevel.LOCAL else timeout
             answer, tokens_in, tokens_out = await asyncio.wait_for(
                 provider.generate(system_prompt=system_prompt, user_prompt=prompt),
                 timeout=current_timeout

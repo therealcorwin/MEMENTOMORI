@@ -305,7 +305,7 @@ services:
       AUTHENTIK_ISSUER: https://auth.${DOMAIN}/application/o/knowledge-api/
       AUTHENTIK_JWKS_URL: http://authentik-server:9000/application/o/knowledge-api/jwks/
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: mistral:latest
+      OLLAMA_MODEL: mistral-nemo:12b
       OLLAMA_EMBEDDING_MODEL: nomic-embed-text
     depends_on:
       knowledge-db:
@@ -446,7 +446,7 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollama_data:/root/.ollama
+      - ./ollama/data:/root/.ollama
     environment:
       - OLLAMA_KEEP_ALIVE=24h
     networks:
@@ -503,4 +503,3 @@ volumes:
   grafana_data:
   loki_data:
   authentik_redis_data:
-  ollama_data:

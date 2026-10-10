@@ -91,7 +91,7 @@ async def test_secret_embedding_forces_sovereign_ollama():
 
 @pytest.mark.asyncio
 async def test_ollama_llm_generation_live():
-    """Vérifie l'inférence locale directe avec mistral:latest sur Ollama."""
+    """Vérifie l'inférence locale directe avec mistral-nemo:12b sur Ollama."""
     provider = OllamaProvider(host=settings.OLLAMA_HOST, model=settings.OLLAMA_MODEL)
 
     system_prompt = "Tu es un assistant de test concis."
@@ -176,4 +176,66 @@ async def test_answer_with_fallback_secret_when_ollama_offline():
         assert resp.provider == "system"
         assert resp.fallback_level == FallbackLevel.SEARCH_ONLY
         assert "Informations ultra confidentielles" in resp.answer
+
+
+@pytest.mark.asyncio
+async def test_answer_with_fallback_public_allows_gemini_primary():
+    """Vérifie que les documents 100% 'public' utilisent Gemini en priorité."""
+    public_frags = [
+        MockFragment("public", "Règlement de copropriété article 1 : parties communes", "Règlement")
+    ]
+
+    mock_gemini = AsyncMock(return_value=("Réponse publique Gemini", 50, 20))
+    mock_mistral = AsyncMock()
+
+    with patch.object(settings, "GEMINI_API_KEY", "fake_gemini_key"), \
+         patch.object(settings, "MISTRAL_API_KEY", "fake_mistral_key"), \
+         patch("knowledge.services.llm_resilience.GeminiProvider.generate", mock_gemini), \
+         patch("knowledge.services.llm_resilience.MistralProvider.generate", mock_mistral):
+
+        resp = await answer_with_fallback(
+            system_prompt="Assistant public",
+            user_query="Quelles sont les parties communes ?",
+            fragments=public_frags,
+            search_scores=[0.9]
+        )
+
+        # Gemini doit être appelé en primaire
+        mock_gemini.assert_called_once()
+        mock_mistral.assert_not_called()
+        assert resp.provider == "gemini"
+        assert resp.fallback_level == FallbackLevel.PRIMARY
+
+
+@pytest.mark.asyncio
+async def test_answer_with_fallback_internal_bypasses_gemini_uses_mistral():
+    """
+    Règle de souveraineté : Gemini est réservé au 'public'.
+    Les données 'interne' ou 'confidentiel' excluent Gemini et utilisent Mistral ou Ollama.
+    """
+    internal_frags = [
+        MockFragment("interne", "Compte-rendu de gestion financière interne", "Gestion")
+    ]
+
+    mock_gemini = AsyncMock()
+    mock_mistral = AsyncMock(return_value=("Réponse interne Mistral", 60, 25))
+
+    with patch.object(settings, "GEMINI_API_KEY", "fake_gemini_key"), \
+         patch.object(settings, "MISTRAL_API_KEY", "fake_mistral_key"), \
+         patch("knowledge.services.llm_resilience.GeminiProvider.generate", mock_gemini), \
+         patch("knowledge.services.llm_resilience.MistralProvider.generate", mock_mistral):
+
+        resp = await answer_with_fallback(
+            system_prompt="Assistant interne",
+            user_query="Quel est le solde de gestion ?",
+            fragments=internal_frags,
+            search_scores=[0.85]
+        )
+
+        # Gemini ne doit JAMAIS être appelé
+        mock_gemini.assert_not_called()
+        # Mistral est appelé
+        mock_mistral.assert_called_once()
+        assert resp.provider == "mistral"
+
 

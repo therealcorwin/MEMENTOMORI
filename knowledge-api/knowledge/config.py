@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 
     # Ollama Local (Sprint 15 - Souveraineté & Mode Secret)
     OLLAMA_HOST: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "mistral:latest"
+    OLLAMA_MODEL: str = "mistral-nemo:12b"
     OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
 
     # Authentik OIDC
