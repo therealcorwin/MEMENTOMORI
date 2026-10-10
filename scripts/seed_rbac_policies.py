@@ -130,7 +130,7 @@ async def seed_rbac():
                 ws_copro.id,
                 principals_map["copro_user"].id,
                 "coproprietaire",
-                ["public", "copro"],
+                ["public", "copro", "collectif"],
                 "interne",
                 ["read", "search"]
             ),
@@ -138,7 +138,7 @@ async def seed_rbac():
                 ws_copro.id,
                 principals_map["copro_user_lot42"].id,
                 "coproprietaire",
-                ["public", "copro", "lot:42"],
+                ["public", "copro", "collectif", "lot:42"],
                 "interne",
                 ["read", "search"]
             ),
@@ -146,7 +146,7 @@ async def seed_rbac():
                 ws_copro.id,
                 principals_map["cs_user"].id,
                 "cs",
-                ["public", "copro", "conseil_syndical"],
+                ["public", "copro", "collectif", "conseil_syndical"],
                 "confidentiel",
                 ["read", "search", "ingest"]
             ),
@@ -154,7 +154,7 @@ async def seed_rbac():
                 ws_copro.id,
                 principals_map["admin_user"].id,
                 "admin",
-                ["public", "copro", "conseil_syndical", "syndic", "lot:42", "owner"],
+                ["public", "copro", "collectif", "conseil_syndical", "syndic", "lot:42", "owner"],
                 "secret",
                 ["read", "write", "search", "admin"]
             ),
@@ -162,7 +162,7 @@ async def seed_rbac():
                 ws_copro.id,
                 principals_map["csbot"].id,
                 "cs",
-                ["public", "copro", "conseil_syndical"],
+                ["public", "copro", "collectif", "conseil_syndical"],
                 "interne",
                 ["read", "search"]
             ),
@@ -209,7 +209,7 @@ async def seed_rbac():
         # 5a. Document secret dans copro (Test 5.3)
         doc_secret = (await session.execute(
             select(Document).where(Document.title == "Codes d'accès et alarmes sécurisées")
-        )).scalar_one_or_none()
+        )).scalars().first()
 
         if not doc_secret:
             doc_secret = Document(
@@ -249,7 +249,7 @@ async def seed_rbac():
         # 5b. Document lot 42 dans copro (Test 5.6)
         doc_lot42 = (await session.execute(
             select(Document).where(Document.title == "Décompte individuel de charges 2025 - Lot 42")
-        )).scalar_one_or_none()
+        )).scalars().first()
 
         if not doc_lot42:
             doc_lot42 = Document(
@@ -289,7 +289,7 @@ async def seed_rbac():
         # 5c. Document de santé dans sante-perso (Test 5.6 isolation inter-workspaces)
         doc_sante = (await session.execute(
             select(Document).where(Document.title == "Bilan Sanguin Annuel 2026")
-        )).scalar_one_or_none()
+        )).scalars().first()
 
         if not doc_sante:
             doc_sante = Document(
@@ -329,7 +329,7 @@ async def seed_rbac():
         # 5d. Contrat ascenseur OTIS dans copro (Test 5.1 / 5.5)
         doc_otis = (await session.execute(
             select(Document).where(Document.title == "Contrat de maintenance ascenseur OTIS 2026")
-        )).scalar_one_or_none()
+        )).scalars().first()
 
         if not doc_otis:
             doc_otis = Document(

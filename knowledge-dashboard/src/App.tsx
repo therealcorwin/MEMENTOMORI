@@ -3,6 +3,7 @@ import { AuthProvider } from '@/auth/AuthProvider'
 import { ProtectedRoute } from '@/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { HomePage } from '@/pages/HomePage'
+import { ChatPage } from '@/pages/ChatPage'
 import { ValidationPage } from '@/pages/ValidationPage'
 import { DocumentsPage } from '@/pages/DocumentsPage'
 import { WorkspacesPage } from '@/pages/WorkspacesPage'
@@ -28,6 +29,7 @@ export default function App() {
             }
           >
             <Route index element={<HomePage />} />
+            <Route path="chat" element={<ChatPage />} />
             <Route path="validation" element={<ValidationPage />} />
             <Route path="documents" element={<DocumentsPage />} />
             <Route path="workspaces" element={<WorkspacesPage />} />

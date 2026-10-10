@@ -33,8 +33,13 @@ WORKSPACE_TO_AGENT = {
     "copro": "csbot",
     "copro-jardins": "csbot",
     "finances-perso": "agent-finances",
+    "admin-perso": "agent-admin",
     "sante-perso": "agent-sante",
+    "entreprise": "agent-entreprise",
     "dev": "agent-dev",
+    "formation": "agent-formation",
+    "consulting": "agent-consulting",
+    "veille": "agent-veille",
 }
 
 
@@ -80,16 +85,42 @@ def fallback_classify_by_keywords(
         "finances-perso": [
             "banque", "compte", "solde", "impôt", "livret", "créditeur", "épargne",
             "débit", "revenus", "fiscal", "trésorerie", "moyens", "payer", "argent",
-            "dépense", "virement", "budget", "patrimoine", "bourse"
+            "dépense", "virement", "budget", "patrimoine", "bourse", "irpp", "taxe foncière", "bnp"
+        ],
+        "admin-perso": [
+            "identité", "cni", "passeport", "assurance", "habitation", "logement", "bail",
+            "maif", "edf", "électricité", "énergie", "état civil", "carte grise", "permis",
+            "famille", "livret de famille", "quittance"
         ],
         "sante-perso": [
             "santé", "médecin", "ordonnance", "sang", "analyse", "traitement",
-            "médicament", "clinique", "docteur", "consultation", "vaccin"
+            "médicament", "clinique", "docteur", "consultation", "vaccin",
+            "biologie", "glycémie", "cholestérol", "posologie", "médical"
+        ],
+        "entreprise": [
+            "entreprise", "société", "facture", "facturation", "devis", "urssaf",
+            "kbis", "siret", "cotisation", "chiffre d'affaires", "ca", "tva",
+            "prestation de conseil", "client"
         ],
         "dev": [
             "docker", "compose", "git", "traefik", "port", "code", "script",
             "base de données", "pgvector", "python", "fastapi", "bug", "deploy",
-            "infrastructure", "stack", "serveur", "api"
+            "infrastructure", "stack", "serveur", "api", "architecture", "microservices",
+            "conventions", "repository", "endpoint"
+        ],
+        "formation": [
+            "formation", "cours", "apprentissage", "transformer", "attention",
+            "deep learning", "clean architecture", "fiche de lecture", "synthèse",
+            "certification", "pédagogique", "concepts"
+        ],
+        "consulting": [
+            "consulting", "mission", "audit", "livrable", "proposition commerciale",
+            "cadrage", "tjm", "prestation", "honoraires", "atelier", "client"
+        ],
+        "veille": [
+            "veille", "llm", "benchmark", "hugging face", "nis2", "cybersécurité",
+            "réglementation", "open-source", "directive", "conformité", "prospective",
+            "technologique", "ia", "modèle"
         ],
     }
 
@@ -111,6 +142,16 @@ def fallback_classify_by_keywords(
     if is_cross_copro_finances and copro_slug in ws_by_slug and "finances-perso" in ws_by_slug:
         scores[copro_slug] = max(scores.get(copro_slug, 0.0), 0.85)
         scores["finances-perso"] = max(scores.get("finances-perso", 0.0), 0.80)
+
+    # Détection transversale templates / contrats partagés
+    is_cross_templates = (
+        ("contrat" in q_lower or "modèle" in q_lower or "template" in q_lower) and
+        ("prestation" in q_lower or "services" in q_lower or "intellectuel" in q_lower)
+    )
+    if is_cross_templates:
+        for s in ["dev", "consulting", "entreprise"]:
+            if s in ws_by_slug:
+                scores[s] = max(scores.get(s, 0.0), 0.75)
 
     if not scores:
         return ClassificationResult(
@@ -165,12 +206,17 @@ async def classify_question(
     if not workspaces:
         return ClassificationResult([], "unknown", question)
 
+    # 2. Fast-path déterministe par mots-clés si confiance élevée (§16.13)
+    fb = fallback_classify_by_keywords(question, workspaces)
+    if fb.strategy in ("single", "multi") and fb.workspaces and fb.workspaces[0].confidence >= 0.75:
+        return fb
+
     ws_by_slug = {w.slug: w for w in workspaces}
 
     # Description formatée des workspaces
     ws_desc_lines = []
     for w in workspaces:
-        desc = w.settings.get("description") if isinstance(w.settings, dict) else w.name
+        desc = (w.settings.get("description") if isinstance(w.settings, dict) else None) or w.name
         ws_desc_lines.append(f"- {w.slug} : {desc}")
     ws_desc_str = "\n".join(ws_desc_lines)
 
@@ -186,6 +232,11 @@ async def classify_question(
     try:
         raw_resp, level, model = await generate_with_fallback(
             prompt=prompt,
+            system_prompt=(
+                "Tu es un classificateur de workspaces strict. "
+                "Si la question posée est hors-domaine (ex: cuisine, recettes, nourriture, météo, sport, cinéma, loisirs) "
+                "ou sans rapport avec les workspaces disponibles, réponds impérativement et uniquement: UNKNOWN"
+            ),
             temperature=0.0,
             max_tokens=64
         )
@@ -468,7 +519,9 @@ async def orchestrate_query(
             "strategy": "unknown",
             "answer": (
                 "Je n'ai pas trouvé d'espace de connaissances correspondant à votre demande. "
-                "Les espaces disponibles actuellement concernent la copropriété, les finances personnelles, la santé et le développement."
+                "Les 9 espaces disponibles concernent la copropriété (copro), les finances personnelles (finances-perso), "
+                "l'administratif (admin-perso), la santé (sante-perso), l'entreprise (entreprise), le dev (dev), "
+                "la formation (formation), le consulting (consulting) et la veille technologique (veille)."
             ),
             "confidence": "none",
             "sources": [],

@@ -145,8 +145,11 @@ async def evaluate_dataset(
                 recall_1 = True
                 recall_5 = True
             else:
-                recall_1 = len(retrieved_titles) > 0 and retrieved_titles[0] == expected_doc
-                recall_5 = any(t == expected_doc for t in retrieved_titles)
+                valid_sources = {expected_doc} if expected_doc else set()
+                if expected_sources:
+                    valid_sources.update(expected_sources)
+                recall_1 = len(retrieved_titles) > 0 and retrieved_titles[0] in valid_sources
+                recall_5 = any(t in valid_sources for t in retrieved_titles)
 
             # 3. Test Answer (Génération étayée)
             t_a0 = time.time()

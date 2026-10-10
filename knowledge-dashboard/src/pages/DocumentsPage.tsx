@@ -177,13 +177,28 @@ export function DocumentsPage() {
                   <th className="px-4 py-3">Statut</th>
                   <th className="px-4 py-3">Sensibilité</th>
                   <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody>
                 {(docs || []).map((doc) => (
-                  <tr key={doc.id} className="border-b border-[hsl(var(--border))] hover:bg-[hsl(var(--accent)/0.3)] transition-colors">
-                    <td className="px-4 py-3 font-medium max-w-xs truncate">{doc.title}</td>
+                  <tr
+                    key={doc.id}
+                    onClick={() => handleOpenDetail(doc.id)}
+                    className="border-b border-[hsl(var(--border))] hover:bg-[hsl(var(--accent)/0.3)] transition-colors cursor-pointer group"
+                    title="Cliquez pour afficher les détails du document"
+                  >
+                    <td className="px-4 py-3 font-medium max-w-sm">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenDetail(doc.id)
+                        }}
+                        className="text-left font-medium text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))] group-hover:underline truncate max-w-full block"
+                      >
+                        {doc.title}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">
                       {doc.collection_name ?? doc.workspace_slug ?? (doc.workspace_id ? doc.workspace_id.slice(0, 8) : '—')}
                     </td>
@@ -192,20 +207,10 @@ export function DocumentsPage() {
                     <td className="px-4 py-3 text-[hsl(var(--muted-foreground))] whitespace-nowrap">
                       {formatDate(doc.updated_at || doc.created_at)}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleOpenDetail(doc.id)}
-                        disabled={detailLoading}
-                      >
-                        Détail →
-                      </Button>
-                    </td>
                   </tr>
                 ))}
                 {!loading && docs.length === 0 && !error && (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">Aucun document trouvé.</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-[hsl(var(--muted-foreground))]">Aucun document trouvé.</td></tr>
                 )}
               </tbody>
             </table>
@@ -254,8 +259,8 @@ export function DocumentsPage() {
 
               {selectedDoc.extracted_text && (
                 <div>
-                  <h3 className="text-sm font-semibold mb-1">Extrait du texte indexé</h3>
-                  <div className="p-3 bg-[hsl(var(--accent)/0.3)] rounded-lg text-xs font-mono text-[hsl(var(--muted-foreground))] whitespace-pre-wrap max-h-48 overflow-y-auto">
+                  <h3 className="text-sm font-semibold mb-1">Contenu textuel indexé</h3>
+                  <div className="p-3 bg-[hsl(var(--accent)/0.3)] rounded-lg text-xs font-mono text-[hsl(var(--muted-foreground))] whitespace-pre-wrap max-h-96 overflow-y-auto leading-relaxed select-text">
                     {selectedDoc.extracted_text}
                   </div>
                 </div>

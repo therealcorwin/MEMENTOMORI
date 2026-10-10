@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "gemini"
     LLM_MODEL: str = "gemini-1.5-flash"
 
+    # Ollama Local (Sprint 15 - Souveraineté & Mode Secret)
+    OLLAMA_HOST: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "mistral:latest"
+    OLLAMA_EMBEDDING_MODEL: str = "nomic-embed-text"
+
     # Authentik OIDC
     AUTHENTIK_ISSUER: str = "http://localhost:9000/application/o/knowledge-api/"
     AUTHENTIK_JWKS_URL: str = "http://localhost:9000/application/o/knowledge-api/jwks/"

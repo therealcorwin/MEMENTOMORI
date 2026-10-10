@@ -56,3 +56,50 @@ export function statusColor(s: string): string {
     default:            return 'bg-gray-800 text-gray-300'
   }
 }
+
+/**
+ * Extrait l'URL source originelle d'un document à partir de ses métadonnées,
+ * versions ou champs directs (supporte link, url, source_url, feed_url, etc.)
+ */
+export function extractSourceUrl(doc?: {
+  metadata?: Record<string, unknown>
+  source_url?: string
+  versions?: { original_file_ref?: string }[]
+  original_file_ref?: string
+} | null): string | null {
+  if (!doc) return null
+  const meta = doc.metadata || {}
+
+  // 1. Clés d'URL dans les métadonnées (link pour RSS, url pour Web, feed_url, etc.)
+  for (const key of ['link', 'url', 'source_url', 'original_url', 'feed_url']) {
+    const val = meta[key]
+    if (typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'))) {
+      return val
+    }
+  }
+
+  // 2. original_file_ref direct
+  if (
+    typeof doc.original_file_ref === 'string' &&
+    (doc.original_file_ref.startsWith('http://') || doc.original_file_ref.startsWith('https://'))
+  ) {
+    return doc.original_file_ref
+  }
+
+  // 3. versions[0].original_file_ref
+  const vRef = doc.versions?.[0]?.original_file_ref
+  if (typeof vRef === 'string' && (vRef.startsWith('http://') || vRef.startsWith('https://'))) {
+    return vRef
+  }
+
+  // 4. source_url direct
+  if (
+    typeof doc.source_url === 'string' &&
+    (doc.source_url.startsWith('http://') || doc.source_url.startsWith('https://'))
+  ) {
+    return doc.source_url
+  }
+
+  return null
+}
+

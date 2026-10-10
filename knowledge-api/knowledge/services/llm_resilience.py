@@ -121,9 +121,9 @@ class OllamaProvider(BaseLLMProvider):
     provider_type = "local"
     name = "ollama"
 
-    def __init__(self, host: str = "http://localhost:11434", model: str = "mistral:latest"):
-        self.host = host
-        self.model = model
+    def __init__(self, host: Optional[str] = None, model: Optional[str] = None):
+        self.host = (host or settings.OLLAMA_HOST).rstrip("/")
+        self.model = model or settings.OLLAMA_MODEL
 
     async def generate(self, system_prompt: str, user_prompt: str) -> tuple[str, int, int]:
         url = f"{self.host}/api/generate"
@@ -131,9 +131,14 @@ class OllamaProvider(BaseLLMProvider):
             "model": self.model,
             "system": system_prompt,
             "prompt": user_prompt,
-            "stream": False
+            "stream": False,
+            "options": {
+                "num_predict": 256,
+                "temperature": 0.2
+            }
         }
-        async with httpx.AsyncClient(timeout=httpx.Timeout(1.5, connect=1.0)) as client:
+        # Timeout adapté pour l'inférence locale CPU (60s)
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=3.0)) as client:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -141,23 +146,26 @@ class OllamaProvider(BaseLLMProvider):
             return answer, data.get("prompt_eval_count", 0), data.get("eval_count", 0)
 
 
-_ollama_available: Optional[bool] = None
-_ollama_last_checked: float = 0.0
+_ollama_cache: dict[str, tuple[bool, float]] = {}
 
-async def check_ollama_health(host: str = "http://localhost:11434") -> bool:
-    """Vérifie rapidement si Ollama est actif en local avec mise en cache du statut (60s)."""
-    global _ollama_available, _ollama_last_checked
+async def check_ollama_health(host: Optional[str] = None, force_refresh: bool = False) -> bool:
+    """Vérifie rapidement si Ollama est actif en local avec mise en cache du statut par hôte (30s)."""
+    target_host = (host or settings.OLLAMA_HOST).rstrip("/")
     now = time.time()
-    if _ollama_available is not None and (now - _ollama_last_checked) < 60.0:
-        return _ollama_available
+    if not force_refresh and target_host in _ollama_cache:
+        cached_status, last_checked = _ollama_cache[target_host]
+        if (now - last_checked) < 30.0:
+            return cached_status
+
     try:
-        async with httpx.AsyncClient(timeout=0.2) as client:
-            resp = await client.get(f"{host}/api/tags")
-            _ollama_available = (resp.status_code == 200)
+        async with httpx.AsyncClient(timeout=1.0) as client:
+            resp = await client.get(f"{target_host}/api/tags")
+            status = (resp.status_code == 200)
     except Exception:
-        _ollama_available = False
-    _ollama_last_checked = now
-    return _ollama_available
+        status = False
+
+    _ollama_cache[target_host] = (status, now)
+    return status
 
 
 async def answer_with_fallback(
@@ -189,14 +197,24 @@ async def answer_with_fallback(
     if await check_ollama_health():
         providers.append((OllamaProvider(), FallbackLevel.LOCAL))
 
+    # Si le contexte documentaire n'a pas encore été injecté dans user_query, on l'ajoute pour le LLM
+    augmented_user_query = user_query
+    if fragments and not any(getattr(f, "content", "") in user_query for f in fragments if getattr(f, "content", "")):
+        context_str = "\n\n".join([
+            f"[{getattr(f, 'document_title', 'Document')}] :\n{getattr(f, 'content', str(f))}"
+            for f in fragments
+        ])
+        augmented_user_query = f"Contexte documentaire fourni :\n{context_str}\n\nQuestion :\n{user_query}\n\nRéponds précisément à la question en t'appuyant strictement sur le contexte documentaire ci-dessus."
+
     for provider, level in providers:
         for attempt in range(1 + max_retries):
             try:
                 t0 = time.time()
                 logger.info("attempting_llm_generation", provider=provider.name, attempt=attempt+1, level=level.value)
+                current_timeout = max(timeout, 60.0) if level == FallbackLevel.LOCAL else timeout
                 answer, tokens_in, tokens_out = await asyncio.wait_for(
-                    provider.generate(system_prompt, user_query),
-                    timeout=timeout
+                    provider.generate(system_prompt, augmented_user_query),
+                    timeout=current_timeout
                 )
                 latency = int((time.time() - t0) * 1000)
                 warning = None
@@ -230,11 +248,11 @@ async def answer_with_fallback(
 
     # Synthèse directe des extraits
     extraits = []
-    for f in fragments[:3]:
+    for f in fragments[:5]:
         title = getattr(f, "document_title", "Document")
         content = getattr(f, "content", str(f)).strip()
-        if len(content) > 1000:
-            content = content[:1000] + "..."
+        if len(content) > 1500:
+            content = content[:1500] + "..."
         extraits.append(f"- [{title}] :\n{content}")
 
     degraded_answer = (
@@ -274,9 +292,10 @@ async def generate_with_fallback(
 
     for provider, level in providers:
         try:
+            current_timeout = max(timeout, 60.0) if level == FallbackLevel.LOCAL else timeout
             answer, tokens_in, tokens_out = await asyncio.wait_for(
                 provider.generate(system_prompt=system_prompt, user_prompt=prompt),
-                timeout=timeout
+                timeout=current_timeout
             )
             return answer.strip(), level, provider.model
         except Exception as e:

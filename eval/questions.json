@@ -1,7 +1,7 @@
 {
   "eval_set": "copro-v1",
-  "version": "1.0",
-  "total_questions": 35,
+  "version": "1.1",
+  "total_questions": 55,
   "questions": [
     {
       "id": "Q001",
@@ -389,6 +389,228 @@
       "difficulty": "easy",
       "unanswerable": true,
       "keywords": ["architecte", "1970"]
+    },
+    {
+      "id": "Q036",
+      "question": "Combien de lots ou copropriétaires sont suivis dans la comptabilité CPTCopro ?",
+      "expected_answer": "65 lots ou copropriétaires sont suivis dans la comptabilité CPTCopro.",
+      "expected_sources": ["CPTCopro - Grand Livre & Balance Générale de la Copropriété"],
+      "source_document": "CPTCopro - Grand Livre & Balance Générale de la Copropriété",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "easy",
+      "keywords": ["65", "lots", "copropriétaires"]
+    },
+    {
+      "id": "Q037",
+      "question": "Quel est le montant total des débits cumulés dans la balance générale CPTCopro ?",
+      "expected_answer": "Le montant total des débits cumulés est de 7 788 806,15 EUR.",
+      "expected_sources": ["CPTCopro - Grand Livre & Balance Générale de la Copropriété"],
+      "source_document": "CPTCopro - Grand Livre & Balance Générale de la Copropriété",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["7 788 806", "débits"]
+    },
+    {
+      "id": "Q038",
+      "question": "Quel est le montant du solde comptable global de la copropriété dans CPTCopro ?",
+      "expected_answer": "Le solde comptable global de la copropriété s'élève à 7 736 114,00 EUR.",
+      "expected_sources": ["CPTCopro - Grand Livre & Balance Générale de la Copropriété"],
+      "source_document": "CPTCopro - Grand Livre & Balance Générale de la Copropriété",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["7 736 114", "solde"]
+    },
+    {
+      "id": "Q039",
+      "question": "Combien de comptes présentent un solde débiteur élevé supérieur à 10 000 EUR dans la synthèse des impayés CPTCopro ?",
+      "expected_answer": "Il y a 20 comptes sous surveillance avec un solde débiteur supérieur à 10 000 EUR.",
+      "expected_sources": ["CPTCopro - Synthèse des Impayés et Soldes Débiteurs Élevés"],
+      "source_document": "CPTCopro - Synthèse des Impayés et Soldes Débiteurs Élevés",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["20", "surveillance", "10 000"]
+    },
+    {
+      "id": "Q040",
+      "question": "Quel est le montant du solde débiteur du Lot 44 (LE NGOC HUNG) dans les alertes CPTCopro ?",
+      "expected_answer": "Le Lot 44 présente un solde débiteur de 1 066 774,72 EUR.",
+      "expected_sources": ["CPTCopro - Synthèse des Impayés et Soldes Débiteurs Élevés", "CPTCopro - Situation Individuelle des Charges Lot 44"],
+      "source_document": "CPTCopro - Synthèse des Impayés et Soldes Débiteurs Élevés",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "hard",
+      "keywords": ["1 066 774", "Lot 44"]
+    },
+    {
+      "id": "Q041",
+      "question": "Quelle est la situation financière et le solde du Lot 10 (DOMINGUES ANA MARIA) dans CPTCopro ?",
+      "expected_answer": "Le Lot 10 a un total de débits de 130 680,14 EUR et un solde débiteur de 129 570,64 EUR pour un 4p.",
+      "expected_sources": ["CPTCopro - Situation Individuelle des Charges Lot 10"],
+      "source_document": "CPTCopro - Situation Individuelle des Charges Lot 10",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["130 680", "129 570", "Lot 10"]
+    },
+    {
+      "id": "Q042",
+      "question": "Quel est le type d'appartement et le propriétaire du Lot 11 dans CPTCopro ?",
+      "expected_answer": "Le Lot 11 est un appartement 4p appartenant à FLAMANT PASCALE avec un solde de 81 427,09 EUR.",
+      "expected_sources": ["CPTCopro - Situation Individuelle des Charges Lot 11"],
+      "source_document": "CPTCopro - Situation Individuelle des Charges Lot 11",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "easy",
+      "keywords": ["FLAMANT PASCALE", "4p", "Lot 11"]
+    },
+    {
+      "id": "Q043",
+      "question": "Quel est le solde actuel et le type de bien pour le Lot 12 (FAYEZ WAEL) dans CPTCopro ?",
+      "expected_answer": "Le Lot 12 est un 3p appartenant à FAYEZ WAEL avec un solde de 31 748,98 EUR.",
+      "expected_sources": ["CPTCopro - Situation Individuelle des Charges Lot 12"],
+      "source_document": "CPTCopro - Situation Individuelle des Charges Lot 12",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["FAYEZ WAEL", "31 748", "3p"]
+    },
+    {
+      "id": "Q044",
+      "question": "Quelle est la situation comptable du Lot 28 (TAKLA ZAKARIA ANNA) dans CPTCopro ?",
+      "expected_answer": "Le Lot 28 est un 4p appartenant à TAKLA ZAKARIA ANNA avec un solde comptable de 4 641,36 EUR.",
+      "expected_sources": ["CPTCopro - Situation Individuelle des Charges Lot 28"],
+      "source_document": "CPTCopro - Situation Individuelle des Charges Lot 28",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["TAKLA ZAKARIA", "Lot 28", "4 641"]
+    },
+    {
+      "id": "Q045",
+      "question": "Quel est l'incident enregistré sous le ticket T-2026-042 dans Botcopro ?",
+      "expected_answer": "Le ticket T-2026-042 concerne une panne d'éclairage de sécurité au 2ème étage Bâtiment B, résolu après remplacement du télérupteur.",
+      "expected_sources": ["Botcopro - Ticket T-2026-042 (Panne Éclairage Palier Bâtiment B)"],
+      "source_document": "Botcopro - Ticket T-2026-042 (Panne Éclairage Palier Bâtiment B)",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "easy",
+      "keywords": ["T-2026-042", "éclairage", "Bâtiment B", "télérupteur"]
+    },
+    {
+      "id": "Q046",
+      "question": "Quel prestataire est intervenu pour résoudre l'incident électrique T-2026-042 ?",
+      "expected_answer": "La société ÉlecPro Provence est intervenue pour réparer l'éclairage de sécurité.",
+      "expected_sources": ["Botcopro - Ticket T-2026-042 (Panne Éclairage Palier Bâtiment B)"],
+      "source_document": "Botcopro - Ticket T-2026-042 (Panne Éclairage Palier Bâtiment B)",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "easy",
+      "keywords": ["ÉlecPro Provence", "télérupteur"]
+    },
+    {
+      "id": "Q047",
+      "question": "Quelle proposition d'idée pour l'Assemblée Générale 2026 a été soumise dans Botcopro ?",
+      "expected_answer": "L'installation d'une infrastructure collective de recharge pour véhicules électriques (IRVE) au parking sous-sol.",
+      "expected_sources": ["Botcopro - Idée AG : Installation de Bornes de Recharge Véhicules Électriques (IRVE)"],
+      "source_document": "Botcopro - Idée AG : Installation de Bornes de Recharge Véhicules Électriques (IRVE)",
+      "workspace": "copro",
+      "role": "coproprietaire",
+      "difficulty": "easy",
+      "keywords": ["IRVE", "recharge", "véhicules électriques", "parking"]
+    },
+    {
+      "id": "Q048",
+      "question": "Quel opérateur de réseau est mentionné dans le projet d'infrastructure de recharge IRVE ?",
+      "expected_answer": "Le projet prévoit une solution conventionnée avec Enedis et un opérateur de recharge sans frais direct pour les copropriétaires non équipés.",
+      "expected_sources": ["Botcopro - Idée AG : Installation de Bornes de Recharge Véhicules Électriques (IRVE)"],
+      "source_document": "Botcopro - Idée AG : Installation de Bornes de Recharge Véhicules Électriques (IRVE)",
+      "workspace": "copro",
+      "role": "coproprietaire",
+      "difficulty": "medium",
+      "keywords": ["Enedis", "opérateur de recharge"]
+    },
+    {
+      "id": "Q049",
+      "question": "Quel résultat a obtenu le sondage de copropriété sur le réaménagement de l'espace vert central ?",
+      "expected_answer": "L'option A (Bancs supplémentaires et boîte à livres) a obtenu 68% des suffrages des résidents.",
+      "expected_sources": ["Botcopro - Consultation Résidents : Aménagement de l'Espace Vert Central"],
+      "source_document": "Botcopro - Consultation Résidents : Aménagement de l'Espace Vert Central",
+      "workspace": "copro",
+      "role": "coproprietaire",
+      "difficulty": "easy",
+      "keywords": ["68%", "bancs", "boîte à livres"]
+    },
+    {
+      "id": "Q050",
+      "question": "Quel équipement précis a été contrôlé lors de la visite du prestataire OTIS du 25 mars 2026 ?",
+      "expected_answer": "L'ascenseur principal du Bâtiment A identifié sous le numéro d'installation ASC-4912.",
+      "expected_sources": ["Botcopro - Passage Prestataire OTIS (Contrat Entretien Ascenseur Bâtiment A)"],
+      "source_document": "Botcopro - Passage Prestataire OTIS (Contrat Entretien Ascenseur Bâtiment A)",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["ASC-4912", "Ascenseur", "Bâtiment A"]
+    },
+    {
+      "id": "Q051",
+      "question": "Quelles vérifications techniques ont été effectuées par OTIS sur l'ascenseur Bâtiment A le 25 mars 2026 ?",
+      "expected_answer": "Graissage des glissières, réglage de la temporisation des portes palières et test conforme de la téléalarme.",
+      "expected_sources": ["Botcopro - Passage Prestataire OTIS (Contrat Entretien Ascenseur Bâtiment A)"],
+      "source_document": "Botcopro - Passage Prestataire OTIS (Contrat Entretien Ascenseur Bâtiment A)",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["graissage", "glissières", "portes palières", "téléalarme"]
+    },
+    {
+      "id": "Q052",
+      "question": "Quel est le solde comptable du Lot 50 dans la comptabilité CPTCopro ?",
+      "expected_answer": "Le relevé du Lot 50 indique la situation comptable individuelle de ce bien.",
+      "expected_sources": ["CPTCopro - Situation Individuelle des Charges Lot 50"],
+      "source_document": "CPTCopro - Situation Individuelle des Charges Lot 50",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "medium",
+      "keywords": ["Lot 50", "CPTCopro"]
+    },
+    {
+      "id": "Q053",
+      "question": "Combien d'opérations comptables sont au total répertoriées dans le Grand Livre CPTCopro ?",
+      "expected_answer": "10 758 opérations comptables enregistrées couvrent la période.",
+      "expected_sources": ["CPTCopro - Grand Livre & Balance Générale de la Copropriété"],
+      "source_document": "CPTCopro - Grand Livre & Balance Générale de la Copropriété",
+      "workspace": "copro",
+      "role": "cs",
+      "difficulty": "easy",
+      "keywords": ["10 758", "opérations"]
+    },
+    {
+      "id": "Q054",
+      "question": "Quelle est la marque de la machine à café du bureau du gardien ?",
+      "expected_answer": "Les documents disponibles ne contiennent aucune information sur la machine à café du gardien.",
+      "expected_sources": [],
+      "source_document": null,
+      "workspace": "copro",
+      "role": "coproprietaire",
+      "difficulty": "easy",
+      "unanswerable": true,
+      "keywords": ["machine à café", "gardien"]
+    },
+    {
+      "id": "Q055",
+      "question": "Quel est le montant des honoraires du notaire pour la vente du Lot 99 ?",
+      "expected_answer": "Les documents de la copropriété ne contiennent aucune information sur une vente ou des frais de notaire pour ce lot.",
+      "expected_sources": [],
+      "source_document": null,
+      "workspace": "copro",
+      "role": "coproprietaire",
+      "difficulty": "easy",
+      "unanswerable": true,
+      "keywords": ["notaire", "vente"]
     }
   ]
 }

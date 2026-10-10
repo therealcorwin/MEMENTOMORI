@@ -9,12 +9,14 @@ import {
   FileText,
   Globe,
   Search,
+  Bot,
   ClipboardList,
   Activity,
 } from 'lucide-react'
 
 const navItems = [
   { to: '/',            icon: Home,          label: 'Accueil' },
+  { to: '/chat',        icon: Bot,           label: 'Assistant IA' },
   { to: '/validation',  icon: CheckSquare,   label: 'Validation' },
   { to: '/documents',   icon: FileText,      label: 'Documents' },
   { to: '/workspaces',  icon: Globe,         label: 'Workspaces' },

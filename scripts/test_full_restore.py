@@ -21,7 +21,7 @@ if hasattr(sys.stdout, "reconfigure"):
 load_dotenv()
 
 # Configuration
-CONTAINER_NAME = "mementomori-knowledge-db"
+CONTAINER_NAME = "mementomori-knowledge-db-1"
 DB_NAME = "knowledge"
 RESTORE_DB_NAME = "knowledge_restore_verify"
 PG_USER = "knowledge_app"

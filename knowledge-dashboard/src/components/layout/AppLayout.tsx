@@ -1,12 +1,16 @@
 /**
  * Layout principal : sidebar fixe + contenu scrollable
  */
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { ChatWidget } from '@/components/chat/ChatWidget'
 
 export function AppLayout() {
+  const location = useLocation()
+  const isChatPage = location.pathname === '/chat'
+
   return (
     <div className="min-h-screen flex">
       <Sidebar />
@@ -21,6 +25,9 @@ export function AppLayout() {
           </ErrorBoundary>
         </main>
       </div>
+
+      {/* Widget Chat flottant accessible sur l'ensemble des pages */}
+      {!isChatPage && <ChatWidget />}
     </div>
   )
 }

@@ -38,6 +38,21 @@ async def fetch_paperless_documents(limit: int = 100) -> List[dict[str, Any]]:
         return data.get("results", [])
 
 
+async def fetch_paperless_tags() -> dict[int, str]:
+    """Récupère la correspondance id -> nom pour tous les tags Paperless."""
+    url = f"{settings.PAPERLESS_URL.rstrip('/')}/api/tags/?page_size=100"
+    headers = {"Authorization": f"Token {settings.PAPERLESS_API_TOKEN}"}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                return {t["id"]: t["name"] for t in data.get("results", [])}
+    except Exception as e:
+        logger.warning("paperless_fetch_tags_error", error=str(e))
+    return {}
+
+
 async def fetch_single_paperless_document(document_id: int) -> Optional[dict[str, Any]]:
     """Récupère les détails et le contenu OCR d'un document unique depuis Paperless-ngx."""
     url = f"{settings.PAPERLESS_URL.rstrip('/')}/api/documents/{document_id}/"
@@ -63,10 +78,15 @@ async def ingest_single_document(
     sensitivity: str = "interne",
     original_ref: Optional[str] = None,
     metadata_: Optional[dict[str, Any]] = None,
-) -> Optional[uuid.UUID]:
+    auto_approve: bool = True,
+    status: Optional[str] = None,
+    return_is_new: bool = False,
+) -> Any:
     """Ingère un document unique à travers tout le pipeline de connaissance."""
     if not content or not content.strip():
         logger.warning("skipping_empty_document", title=title)
+        if return_is_new:
+            return None, False
         return None
 
     # 1. Résolution ou création du Workspace
@@ -99,7 +119,7 @@ async def ingest_single_document(
     )
     source = src_res.scalar_one_or_none()
     if not source:
-        source = Source(workspace_id=workspace.id, connector_type=source_type, auto_approve=True)
+        source = Source(workspace_id=workspace.id, connector_type=source_type, auto_approve=auto_approve)
         db.add(source)
         await db.flush()
 
@@ -112,15 +132,18 @@ async def ingest_single_document(
     )
     if is_dup:
         logger.info("document_deduplicated_skipped", title=title, reason=reason, dup_of=str(dup_id))
+        if return_is_new:
+            return dup_id, False
         return dup_id
 
     # 5. Création du Document et de sa DocumentVersion
     content_hash = compute_content_hash(content)
+    actual_status = status if status is not None else ("actif" if auto_approve else "a_verifier")
     doc = Document(
         collection_id=collection.id,
         source_id=source.id,
         title=title,
-        status="actif",
+        status=actual_status,
         scope=scope,
         sensitivity=sensitivity,
         content_hash=content_hash,
@@ -148,12 +171,14 @@ async def ingest_single_document(
     )
     if not chunks:
         logger.warning("no_chunks_generated", title=title)
+        if return_is_new:
+            return doc.id, True
         return doc.id
 
     # 7. Calcul des Embeddings vectoriels (768 dimensions)
     # Préparer le texte à vectoriser (avec le préfixe de contexte !)
     texts_to_embed = [f"{c.context_prefix}\n{c.content}" for c in chunks]
-    embeddings = await generate_embeddings(texts_to_embed)
+    embeddings = await generate_embeddings(texts_to_embed, sensitivity=sensitivity)
 
     # 8. Insertion des fragments
     for idx, (chunk, emb) in enumerate(zip(chunks, embeddings)):
@@ -184,6 +209,8 @@ async def ingest_single_document(
 
     await db.commit()
     logger.info("document_ingested_successfully", doc_id=str(doc.id), title=title, chunks=len(chunks))
+    if return_is_new:
+        return doc.id, True
     return doc.id
 
 
@@ -194,6 +221,7 @@ async def run_paperless_sync(
 ) -> int:
     """Synchronise tous les documents Paperless-ngx dans la base de connaissance."""
     docs = await fetch_paperless_documents()
+    tag_map = await fetch_paperless_tags()
     logger.info("fetched_documents_from_paperless", count=len(docs))
 
     total_ingested = 0
@@ -206,20 +234,37 @@ async def run_paperless_sync(
             content = p_doc.get("content") or ""
             original_ref = f"paperless://{p_doc.get('id')}"
 
-            # Détermination de la sensibilité et du scope selon tags
+            # Détermination de la sensibilité, du scope et du workspace selon les tags réels
             scope = "copro"
             sensitivity = "interne"
-            tags = p_doc.get("tags") or []
-            # tag 14 = "scope:copro", 15 = "scope:conseil_syndical"
-            if 15 in tags:
-                scope = "conseil_syndical"
-            if 10 in tags:  # public
-                sensitivity = "public"
+            doc_ws = workspace_slug
+
+            raw_tags = p_doc.get("tags") or []
+            tag_names = [tag_map.get(t, str(t)) for t in raw_tags]
+
+            for t_name in tag_names:
+                t_lower = t_name.lower()
+                if t_lower.startswith("ws:"):
+                    doc_ws = t_lower[3:]
+                elif t_lower in ("scope:cs", "cs", "conseil_syndical"):
+                    scope = "conseil_syndical"
+                elif t_lower in ("scope:collectif", "collectif"):
+                    scope = "collectif"
+                elif t_lower.startswith("scope:"):
+                    scope = t_lower[6:]
+                elif t_lower in ("sens:public", "public"):
+                    sensitivity = "public"
+                elif t_lower in ("sens:secret", "secret"):
+                    sensitivity = "secret"
+                elif t_lower in ("sens:confidentiel", "confidentiel"):
+                    sensitivity = "confidentiel"
+                elif t_lower in ("sens:interne", "interne"):
+                    sensitivity = "interne"
 
             doc_id = await ingest_single_document(
                 title=title,
                 content=content,
-                workspace_slug=workspace_slug,
+                workspace_slug=doc_ws,
                 collection_name=collection_name,
                 db=session,
                 source_type="paperless",
@@ -229,7 +274,8 @@ async def run_paperless_sync(
                 metadata_={
                     "paperless_id": p_doc.get("id"),
                     "created": p_doc.get("created"),
-                    "doc_type": p_doc.get("document_type")
+                    "doc_type": p_doc.get("document_type"),
+                    "tags": tag_names
                 }
             )
             if doc_id:

@@ -32,6 +32,7 @@ services:
     restart: unless-stopped
     command:
       - "--api.dashboard=true"
+      - "--ping=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.endpoint=tcp://docker-socket-proxy:2375"
@@ -114,6 +115,7 @@ services:
       - paperless_redis_data:/data
     networks:
       - database
+      - shared_network
 
   paperless-db:
     image: postgres:16-alpine
@@ -126,6 +128,7 @@ services:
       - paperless_pgdata:/var/lib/postgresql/data
     networks:
       - database
+      - shared_network
 
   paperless:
     image: ghcr.io/paperless-ngx/paperless-ngx:2.14  # Pinned
@@ -188,6 +191,7 @@ services:
       - authentik_pgdata:/var/lib/postgresql/data
     networks:
       - database
+      - shared_network
 
   # authentik-redis: Obsolète depuis Authentik 2025.10 (toutes les files et sessions sont intégrées à PostgreSQL)
   # authentik-redis:
@@ -258,6 +262,7 @@ services:
       - ./sql/init_knowledge.sql:/docker-entrypoint-initdb.d/01_init.sql
     networks:
       - database
+      - shared_network
 
   # ========== REDIS (queue d'ingestion + cache) ==========
   knowledge-redis:
@@ -275,6 +280,7 @@ services:
       - knowledge_redis_data:/data
     networks:
       - database
+      - shared_network
 
   # ========== KNOWLEDGE-API (FastAPI) ==========
   knowledge-api:
@@ -298,6 +304,9 @@ services:
       CORS_ORIGINS: https://dashboard.${DOMAIN},http://localhost:5173
       AUTHENTIK_ISSUER: https://auth.${DOMAIN}/application/o/knowledge-api/
       AUTHENTIK_JWKS_URL: http://authentik-server:9000/application/o/knowledge-api/jwks/
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: mistral:latest
+      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
     depends_on:
       knowledge-db:
         condition: service_healthy
@@ -430,6 +439,19 @@ services:
     networks:
       - monitoring
 
+  # ========== OLLAMA (LLM Local & Embeddings Souverains - Sprint 15) ==========
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    networks:
+      - backend
+
   # ========== DASHBOARD ==========
   knowledge-dashboard:
     build:
@@ -463,6 +485,9 @@ networks:
     name: knowledge_monitoring
     internal: true
     # Réseau dédié Prometheus/Grafana/Loki/Promtail. Grafana exposé via Traefik (backend).
+  shared_network:
+    name: Shared_Network
+    external: true
 
 volumes:
   traefik_letsencrypt:
@@ -478,3 +503,4 @@ volumes:
   grafana_data:
   loki_data:
   authentik_redis_data:
+  ollama_data:

@@ -221,3 +221,29 @@ async def test_cptcopro_rbac_search_isolation(async_client, db_session):
     results_cs = resp_cs.json()["results"]
     titles_cs = [r["document_title"] for r in results_cs]
     assert "CPTCopro - Grand Livre & Clôture Exercice 2024" in titles_cs
+
+
+@pytest.mark.asyncio
+async def test_botcopro_sync_idempotence_and_records(db_session):
+    """Vérifie la synchronisation des données Botcopro et leur idempotence (Sprint 11, Tâche 11.2)."""
+    from knowledge.services.botcopro import run_botcopro_sync
+
+    with patch("knowledge.services.ingestion.generate_embeddings", new_callable=AsyncMock) as mock_emb:
+        mock_emb.return_value = [[0.06] * 768]
+
+        count_first = await run_botcopro_sync(workspace_slug="copro", db=db_session, force_mock=True)
+        assert count_first == 4
+
+        res = await db_session.execute(
+            select(Document).where(Document.title.like("Botcopro%"))
+        )
+        docs = res.scalars().all()
+        assert len(docs) >= 4
+
+        scopes = {d.scope for d in docs}
+        assert "conseil_syndical" in scopes
+        assert "collectif" in scopes
+
+        count_second = await run_botcopro_sync(workspace_slug="copro", db=db_session, force_mock=True)
+        assert count_second == 4
+

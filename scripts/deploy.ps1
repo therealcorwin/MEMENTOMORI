@@ -160,7 +160,7 @@ Start-Sleep -Seconds 5
 
 try {
     $healthResp = Invoke-RestMethod -Uri "http://127.0.0.1:8100/health" -Method Get -TimeoutSec 5 -ErrorAction Stop
-    if ($healthResp.status -eq "healthy") {
+    if ($healthResp.status -in @("ok", "healthy")) {
         Write-Host "[+] API Healthcheck : OK (status: healthy)" -ForegroundColor Green
     }
     else {

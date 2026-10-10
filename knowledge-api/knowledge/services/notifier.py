@@ -44,8 +44,8 @@ async def send_admin_alert(
             level = AlertLevel.INFO
 
     icon = LEVEL_ICONS.get(level, "ℹ️")
-    token = bot_token or os.getenv("BOT_TOKEN")
-    target_chat = chat_id or os.getenv("ADMIN_CHAT_ID") or os.getenv("COPRO_CHAT_ID")
+    token = bot_token or os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("BOT_TOKEN")
+    target_chat = chat_id or os.getenv("TELEGRAM_ADMIN_CHAT_ID") or os.getenv("ADMIN_CHAT_ID") or os.getenv("COPRO_CHAT_ID")
 
     context_str = ""
     if context:

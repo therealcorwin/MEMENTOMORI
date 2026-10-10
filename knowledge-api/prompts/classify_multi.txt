@@ -15,10 +15,10 @@ PRIMARY:<slug> (score 0.85-1.0)
 PRIMARY:<slug> (score)
 SECONDARY:<slug> (score)
 
-3. Si la question est hors-domaine ou totalement incompréhensible, réponds :
+3. Si la question est hors-domaine (ex: cuisine, recettes de gâteau ou nourriture, météo, sport, cinéma, culture générale) ou sans rapport avec les workspaces disponibles, réponds impérativement et uniquement :
 UNKNOWN
 
 Format strict :
 PRIMARY:copro (0.9)
 SECONDARY:finances-perso (0.7)
-Ne fournis aucune autre explication.
+Ne fournis aucune autre explication ni phrase additionnelle.

@@ -3,7 +3,7 @@
 import uuid
 from dataclasses import dataclass
 from typing import Any, List, Optional
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from knowledge.logging import get_logger
@@ -56,34 +56,40 @@ async def hybrid_search(
         max_sensitivity=max_sensitivity,
     )
 
-    # Base join pour les filtres de sécurité
-    base_join = (
-        select(
-            Fragment.id.label("frag_id"),
-            Fragment.content,
-            Fragment.context_prefix,
-            Fragment.page_number,
-            Fragment.citation_ref,
-            Document.id.label("doc_id"),
-            Document.title.label("doc_title"),
-            Document.version.label("doc_version"),
-            Document.sensitivity,
-            Document.scope
+    scope_cond = Document.scope.in_(allowed_scopes)
+    if any(s in allowed_scopes for s in ("conseil_syndical", "admin", "owner", "syndic")):
+        scope_cond = or_(
+            Document.scope.in_(allowed_scopes),
+            Document.scope.startswith("lot:")
         )
-        .select_from(Fragment)
-        .join(DocumentVersion, Fragment.document_version_id == DocumentVersion.id)
-        .join(Document, DocumentVersion.document_id == Document.id)
-        .join(Collection, Document.collection_id == Collection.id)
-        .join(CollectionWorkspace, Collection.id == CollectionWorkspace.collection_id)
-        .where(
-            and_(
-                CollectionWorkspace.workspace_id.in_(workspace_ids),
-                Document.is_active == True,  # noqa: E712
-                Document.scope.in_(allowed_scopes),
-                func.sensitivity_level(Document.sensitivity) <= func.sensitivity_level(max_sensitivity),
+
+    base_join = (
+            select(
+                Fragment.id.label("frag_id"),
+                Fragment.content,
+                Fragment.context_prefix,
+                Fragment.page_number,
+                Fragment.citation_ref,
+                Document.id.label("doc_id"),
+                Document.title.label("doc_title"),
+                Document.version.label("doc_version"),
+                Document.sensitivity,
+                Document.scope
+            )
+            .select_from(Fragment)
+            .join(DocumentVersion, Fragment.document_version_id == DocumentVersion.id)
+            .join(Document, DocumentVersion.document_id == Document.id)
+            .join(Collection, Document.collection_id == Collection.id)
+            .join(CollectionWorkspace, Collection.id == CollectionWorkspace.collection_id)
+            .where(
+                and_(
+                    CollectionWorkspace.workspace_id.in_(workspace_ids),
+                    Document.is_active == True,  # noqa: E712
+                    scope_cond,
+                    func.sensitivity_level(Document.sensitivity) <= func.sensitivity_level(max_sensitivity),
+                )
             )
         )
-    )
 
     # 1. Recherche vectorielle (Top 20 par distance cosine)
     vec_stmt = (
@@ -104,9 +110,10 @@ async def hybrid_search(
         stop_words = {
             "quel", "quelle", "quels", "quelles", "dans", "pour", "cette", "sont",
             "avec", "est", "les", "des", "une", "par", "sur", "ont", "ete", "qui",
-            "sous", "dont", "chez", "nous", "vous", "leur", "plus", "tout", "tous"
+            "sous", "dont", "chez", "nous", "vous", "leur", "plus", "tout", "tous",
+            "le", "la", "de", "du", "un", "au", "en", "ce", "ci", "ça"
         }
-        tokens = re.findall(r'\b[a-zA-Z0-9_\u00C0-\u017F]{3,}\b', clean_q.lower())
+        tokens = re.findall(r'\b[a-zA-Z0-9_\u00C0-\u017F]{2,}\b', clean_q.lower())
         meaningful = [t for t in tokens if t not in stop_words]
 
         try:
