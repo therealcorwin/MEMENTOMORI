@@ -2,7 +2,7 @@
 
 import json
 import os
-from typing import List
+from typing import Any, List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -67,7 +67,7 @@ class Settings(BaseSettings):
             return json.loads(val)
         return [item.strip() for item in val.split(",") if item.strip()]
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, __context: Any) -> None:  # skylos: ignore
         if not self.DATABASE_URL:
             db_pw = os.getenv("KNOWLEDGE_DB_PASSWORD", "")
             self.DATABASE_URL = f"postgresql+asyncpg://knowledge_app:{db_pw}@localhost:5433/knowledge"

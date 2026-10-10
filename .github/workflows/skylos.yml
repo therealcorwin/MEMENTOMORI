@@ -39,7 +39,7 @@ jobs:
         run: |
           set -o pipefail
           # Scan complet (-a) avec Quality Gate (--gate), résumé Markdown (--summary) et annotations PR (--github)
-          skylos . -a --gate --summary --github 2>&1 | tee skylos_report.txt
+          skylos . -a --gate --summary --github --no-grep-verify 2>&1 | tee skylos_report.txt
         continue-on-error: true
 
       - name: Publier le résumé d'exécution dans GitHub

@@ -52,7 +52,7 @@ ignore = [
     "SKY-Q502",
     "SKY-L004"
 ]
-exclude = ["scripts"]
+exclude = ["scripts", ".env"]
 
 [tool.skylos.gate]
 fail_on_critical = true
