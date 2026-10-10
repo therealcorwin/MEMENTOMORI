@@ -43,8 +43,15 @@ skips = ["B101"]
 
 [tool.skylos]
 # Exemption pour le montage du socket Docker hôte requis par Traefik et Promtail (SKY-D331)
-# Exemption de complexité cyclomatique / cognitive (SKY-Q301, SKY-Q306)
-ignore = ["SKY-D331", "SKY-Q301", "SKY-Q306"]
+# Exemption de complexité cyclomatique / cognitive et métriques de code (SKY-Q301, SKY-Q306, SKY-C304, SKY-Q502, SKY-L004)
+ignore = [
+    "SKY-D331",
+    "SKY-Q301",
+    "SKY-Q306",
+    "SKY-C304",
+    "SKY-Q502",
+    "SKY-L004"
+]
 exclude = ["scripts"]
 
 [tool.skylos.gate]

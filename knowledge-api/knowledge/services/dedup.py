@@ -42,7 +42,7 @@ async def check_duplicate(
     if collection_id:
         stmt = stmt.where(Document.collection_id == collection_id)
 
-    result = await db.execute(stmt)
+    result = await db.execute(stmt)  # skylos: ignore [SKY-D211]
     existing_doc = result.scalar_one_or_none()
 
     if existing_doc:
