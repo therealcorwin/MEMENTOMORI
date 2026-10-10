@@ -1,4 +1,4 @@
-"""
+r"""
 Met à jour src/architecture_base_connaissances.md pour intégrer
 le principe P7 et la structure physique D:\Dev\Docker\MEMENTOMORI dans la section 10.
 """

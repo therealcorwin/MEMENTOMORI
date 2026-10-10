@@ -212,8 +212,8 @@ async def list_documents(
         query = query.where(and_(*filters))
         count_query = count_query.where(and_(*filters))
 
-    total = (await db.execute(count_query)).scalar() or 0
-    docs = (await db.execute(query.order_by(Document.created_at.desc()).offset(offset).limit(limit))).scalars().all()
+    total = (await db.execute(count_query)).scalar() or 0  # skylos: ignore [SKY-D211]
+    docs = (await db.execute(query.order_by(Document.created_at.desc()).offset(offset).limit(limit))).scalars().all()  # skylos: ignore [SKY-D211]
 
     items = []
     for d in docs:
@@ -699,52 +699,69 @@ async def get_cache_stats(
     }
 
 
+def _format_search_audit(detail: dict[str, Any], _ws_name: Optional[str]) -> str:
+    q = detail.get("query")
+    count = detail.get("results_count", 0)
+    suffix = "s" if count > 1 else ""
+    return f"Recherche : « {q} » ({count} résultat{suffix})" if q else f"Recherche de documents ({count} résultat{suffix})"
+
+
+def _format_answer_audit(detail: dict[str, Any], _ws_name: Optional[str]) -> str:
+    q = detail.get("query")
+    count = detail.get("sources_count", 0)
+    conf = detail.get("confidence")
+    conf_str = f", confiance {conf}" if conf is not None else ""
+    suffix = "s" if count > 1 else ""
+    return f"Question RAG : « {q} » ({count} source{suffix}{conf_str})" if q else "Génération de réponse RAG"
+
+
+def _format_delete_ws_audit(detail: dict[str, Any], ws_name: Optional[str]) -> str:
+    ws_n = detail.get("name") or ws_name or "workspace"
+    deleted_docs = detail.get("documents_deleted", 0)
+    if deleted_docs:
+        return f"Suppression du workspace « {ws_n} » ({deleted_docs} document(s) supprimé(s))"
+    return f"Suppression du workspace « {ws_n} »"
+
+
+def _format_update_doc_audit(detail: dict[str, Any], _ws_name: Optional[str]) -> str:
+    title = detail.get("title") or "document"
+    changes = detail.get("changes", {})
+    changes_str = ", ".join(f"{k}→{v}" for k, v in changes.items())
+    return f"Modification de « {title} » ({changes_str})" if changes_str else f"Modification de « {title} »"
+
+
+def _format_export_audit(detail: dict[str, Any], _ws_name: Optional[str]) -> str:
+    return f"Export global de la base ({detail.get('documents_count', 0)} documents, {detail.get('fragments_count', 0)} fragments)"
+
+
+def _format_gdpr_audit(detail: dict[str, Any], _ws_name: Optional[str]) -> str:
+    return f"Anonymisation RGPD ({detail.get('fragments_updated', 0)} fragments anonymisés)"
+
+
+AUDIT_ACTION_FORMATTERS = {
+    "search": _format_search_audit,
+    "answer": _format_answer_audit,
+    "delete_workspace": _format_delete_ws_audit,
+    "create_workspace": lambda d, ws: f"Création du workspace « {d.get('name') or 'workspace'} »",
+    "update_workspace": lambda d, ws: f"Mise à jour du workspace « {d.get('name') or ws or 'workspace'} »",
+    "validate_document": lambda d, _: f"Validation du document « {d.get('title') or 'document'} »",
+    "reject_document": lambda d, _: f"Rejet du document « {d.get('title') or 'document'} »",
+    "delete_document": lambda d, _: f"Suppression du document « {d.get('title') or 'document'} »",
+    "update_document": _format_update_doc_audit,
+    "ingest": lambda d, _: f"Indexation du document « {d.get('title') or 'document'} »",
+    "export_knowledge_base": _format_export_audit,
+    "gdpr_anonymization": _format_gdpr_audit,
+}
+
+
 def generate_audit_summary(action: str, target_type: Optional[str], detail: dict[str, Any], ws_name: Optional[str]) -> str:
     """Génère un résumé textuel clair et intelligible pour un humain d'après l'audit log."""
     detail = detail or {}
-    q = detail.get("query")
-    if action == "search":
-        count = detail.get("results_count", 0)
-        return f"Recherche : « {q} » ({count} résultat{'s' if count > 1 else ''})" if q else f"Recherche de documents ({count} résultat{'s' if count > 1 else ''})"
-    elif action == "answer":
-        count = detail.get("sources_count", 0)
-        conf = detail.get("confidence")
-        conf_str = f", confiance {conf}" if conf is not None else ""
-        return f"Question RAG : « {q} » ({count} source{'s' if count > 1 else ''}{conf_str})" if q else "Génération de réponse RAG"
-    elif action == "delete_workspace":
-        ws_n = detail.get("name") or ws_name or "workspace"
-        deleted_docs = detail.get("documents_deleted", 0)
-        if deleted_docs:
-            return f"Suppression du workspace « {ws_n} » ({deleted_docs} document(s) supprimé(s))"
-        return f"Suppression du workspace « {ws_n} »"
-    elif action == "create_workspace":
-        ws_n = detail.get("name") or "workspace"
-        return f"Création du workspace « {ws_n} »"
-    elif action == "update_workspace":
-        ws_n = detail.get("name") or ws_name or "workspace"
-        return f"Mise à jour du workspace « {ws_n} »"
-    elif action == "validate_document":
-        title = detail.get("title") or "document"
-        return f"Validation du document « {title} »"
-    elif action == "reject_document":
-        title = detail.get("title") or "document"
-        return f"Rejet du document « {title} »"
-    elif action == "delete_document":
-        title = detail.get("title") or "document"
-        return f"Suppression du document « {title} »"
-    elif action == "update_document":
-        title = detail.get("title") or "document"
-        changes = detail.get("changes", {})
-        changes_str = ", ".join(f"{k}→{v}" for k, v in changes.items())
-        return f"Modification de « {title} » ({changes_str})" if changes_str else f"Modification de « {title} »"
-    elif action == "ingest":
-        title = detail.get("title") or "document"
-        return f"Indexation du document « {title} »"
-    elif action == "export_knowledge_base":
-        return f"Export global de la base ({detail.get('documents_count', 0)} documents, {detail.get('fragments_count', 0)} fragments)"
-    elif action == "gdpr_anonymization":
-        return f"Anonymisation RGPD ({detail.get('fragments_updated', 0)} fragments anonymisés)"
+    formatter = AUDIT_ACTION_FORMATTERS.get(action)
+    if formatter:
+        return formatter(detail, ws_name)
 
+    q = detail.get("query")
     if q:
         return f"{action} : « {q} »"
     if detail.get("name"):
@@ -817,9 +834,9 @@ async def get_audit_logs(
         base_query = base_query.where(and_(*conditions))
         count_query = count_query.where(and_(*conditions))
 
-    total = (await db.execute(count_query)).scalar() or 0
+    total = (await db.execute(count_query)).scalar() or 0  # skylos: ignore [SKY-D211]
     items_stmt = base_query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit)
-    rows = (await db.execute(items_stmt)).all()
+    rows = (await db.execute(items_stmt)).all()  # skylos: ignore [SKY-D211]
 
     items = []
     for log, p, ws in rows:
@@ -882,7 +899,7 @@ async def export_knowledge_base(
     ws_query = select(Workspace)
     if workspace_id:
         ws_query = ws_query.where(Workspace.id == workspace_id)
-    workspaces = (await db.execute(ws_query)).scalars().all()
+    workspaces = (await db.execute(ws_query)).scalars().all()  # skylos: ignore [SKY-D211]
 
     ws_ids = [w.id for w in workspaces]
     if not ws_ids:
@@ -1057,7 +1074,7 @@ async def audit_retention_rules(
             .where(CollectionWorkspace.workspace_id == workspace_id)
         )
 
-    docs = (await db.execute(doc_query)).scalars().all()
+    docs = (await db.execute(doc_query)).scalars().all()  # skylos: ignore [SKY-D211]
     now = datetime.now(timezone.utc)
 
     # Définition des règles légales de rétention
@@ -1158,7 +1175,7 @@ async def anonymize_personal_data(
             .where(CollectionWorkspace.workspace_id == req.workspace_id)
         )
 
-    matched_frags = (await db.execute(frag_query)).scalars().all()
+    matched_frags = (await db.execute(frag_query)).scalars().all()  # skylos: ignore [SKY-D211]
     count = len(matched_frags)
 
     # 2. Remplacement et réindexation

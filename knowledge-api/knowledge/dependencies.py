@@ -78,81 +78,50 @@ class AuthContext:
         return self.policy.actions or ["read"]
 
 
-async def get_current_principal(
-    authorization: Optional[str] = Header(None, alias="Authorization"),
-    x_dev_principal: Optional[str] = Header(None, alias="X-Dev-Principal"),
-    db: AsyncSession = Depends(get_db)
-) -> Principal:
-    """Valide le token JWT Authentik ou utilise le mode dev."""
-    # 1. Mode développement / bypass explicite
-    if settings.ENVIRONMENT == "development" and x_dev_principal:
-        result = await db.execute(
-            select(Principal).where(Principal.external_id == x_dev_principal)
+async def _resolve_dev_principal(x_dev_principal: str, db: AsyncSession) -> Principal:
+    """Résout ou crée automatiquement un principal de test en environnement de développement."""
+    result = await db.execute(
+        select(Principal).where(Principal.external_id == x_dev_principal)
+    )
+    principal = result.scalar_one_or_none()
+    if not principal:
+        principal = Principal(
+            type="app" if x_dev_principal == "csbot" else "user",
+            external_id=x_dev_principal,
+            display_name=f"Dev {x_dev_principal}"
         )
-        principal = result.scalar_one_or_none()
-        if not principal:
-            # Création automatique du principal en dev
-            principal = Principal(
-                type="app" if x_dev_principal == "csbot" else "user",
-                external_id=x_dev_principal,
-                display_name=f"Dev {x_dev_principal}"
-            )
-            db.add(principal)
-            await db.commit()
-            await db.refresh(principal)
-        return principal
+        db.add(principal)
+        await db.commit()
+        await db.refresh(principal)
+    return principal
 
-    if not authorization or not authorization.startswith("Bearer "):
+
+def _decode_authentik_jwt(token: str) -> tuple[str, str, list[str]]:
+    """Décode et valide la signature cryptographique RS256 d'un token JWT Authentik."""
+    if not jwks_client:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="En-tête Authorization manquant ou format invalide (Bearer token attendu)",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Client JWKS non configuré"
         )
-
-    token = authorization.split(" ", 1)[1]
-
-    # 2. Validation du token JWT Authentik
-    external_id: str = ""
-    display_name: str = ""
-    groups: list[str] = []
     try:
-        if jwks_client:
-            signing_key = jwks_client.get_signing_key_from_jwt(token)
-            payload = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=["RS256"],
-                audience=settings.AUTHENTIK_AUDIENCE,
-                options={"verify_aud": False}  # Tolérer audience si service account
-            )
-            # Prioriser le username lisible (preferred_username, nickname) sur le sub hash
-            external_id = (
-                payload.get("preferred_username")
-                or payload.get("nickname")
-                or payload.get("client_id")
-                or payload.get("sub")
-                or ""
-            )
-            display_name = payload.get("name") or payload.get("preferred_username") or external_id
-            groups = payload.get("groups") or []
-        else:
-            # Fallback non-vérifié uniquement en DEBUG
-            if settings.DEBUG:
-                unverified = jwt.decode(token, options={"verify_signature": False})
-                external_id = (
-                    unverified.get("preferred_username")
-                    or unverified.get("nickname")
-                    or unverified.get("client_id")
-                    or unverified.get("sub")
-                    or ""
-                )
-                display_name = unverified.get("name") or unverified.get("preferred_username") or external_id
-                groups = unverified.get("groups") or []
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Client JWKS non configuré"
-                )
+        signing_key = jwks_client.get_signing_key_from_jwt(token)
+        payload = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=settings.AUTHENTIK_AUDIENCE,
+            options={"verify_aud": False}  # Tolérer audience si service account
+        )
+        external_id = (
+            payload.get("preferred_username")
+            or payload.get("nickname")
+            or payload.get("client_id")
+            or payload.get("sub")
+            or ""
+        )
+        display_name = payload.get("name") or payload.get("preferred_username") or external_id
+        groups = payload.get("groups") or []
+        return external_id, display_name, groups
     except jwt.PyJWTError as e:
         logger.error("jwt_verification_failed", error=str(e))
         raise HTTPException(
@@ -161,13 +130,14 @@ async def get_current_principal(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if not external_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Identifiant du principal introuvable dans le token",
-        )
 
-    # 3. Récupération ou enregistrement du Principal
+async def _get_or_sync_principal(
+    external_id: str,
+    display_name: str,
+    groups: list[str],
+    db: AsyncSession
+) -> Principal:
+    """Récupère ou met à jour le principal dans la base de données et calcule ses prérogatives."""
     result = await db.execute(
         select(Principal).where(Principal.external_id == external_id)
     )
@@ -187,14 +157,41 @@ async def get_current_principal(
         await db.commit()
         await db.refresh(principal)
 
-    # Détection des privilèges administrateur (groupe Authentik Admins ou super-admin akadmin)
     is_admin = (
         external_id in ("akadmin", "admin", "dev_admin")
         or "authentik Admins" in groups
     )
     setattr(principal, "is_admin", is_admin)
-
     return principal
+
+
+async def get_current_principal(
+    authorization: Optional[str] = Header(None, alias="Authorization"),
+    x_dev_principal: Optional[str] = Header(None, alias="X-Dev-Principal"),
+    db: AsyncSession = Depends(get_db)
+) -> Principal:
+    """Valide le token JWT Authentik ou utilise le mode dev."""
+    # 1. Mode développement / bypass explicite
+    if settings.ENVIRONMENT == "development" and x_dev_principal:
+        return await _resolve_dev_principal(x_dev_principal, db)
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="En-tête Authorization manquant ou format invalide (Bearer token attendu)",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = authorization.split(" ", 1)[1]
+    external_id, display_name, groups = _decode_authentik_jwt(token)
+
+    if not external_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Identifiant du principal introuvable dans le token",
+        )
+
+    return await _get_or_sync_principal(external_id, display_name, groups, db)
 
 
 async def get_auth_context(

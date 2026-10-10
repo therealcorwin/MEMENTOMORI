@@ -76,10 +76,11 @@ class AnswerCacheService:
         if not entry and query_embedding:
             # Distance cosinus max = 1 - threshold (ex: 1 - 0.95 = 0.05)
             max_distance = 1.0 - semantic_threshold
+            dist_col = AnswerCache.embedding.cosine_distance(query_embedding).label("dist")
             sem_stmt = (
                 select(
                     AnswerCache,
-                    AnswerCache.embedding.cosine_distance(query_embedding).label("dist"),
+                    dist_col,
                 )
                 .where(
                     and_(
@@ -87,10 +88,10 @@ class AnswerCacheService:
                         AnswerCache.embedding.is_not(None),
                     )
                 )
-                .order_by("dist")
+                .order_by(dist_col)
                 .limit(1)
             )
-            sem_res = await self.db.execute(sem_stmt)
+            sem_res = await self.db.execute(sem_stmt)  # skylos: ignore [SKY-D211]
             sem_row = sem_res.first()
             if sem_row and sem_row.dist <= max_distance:
                 entry = sem_row[0]

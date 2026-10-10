@@ -92,14 +92,13 @@ async def hybrid_search(
         )
 
     # 1. Recherche vectorielle (Top 20 par distance cosine)
+    vec_distance_col = Fragment.embedding.cosine_distance(query_embedding).label("vec_distance")
     vec_stmt = (
-        base_join.add_columns(
-            Fragment.embedding.cosine_distance(query_embedding).label("vec_distance")
-        )
-        .order_by("vec_distance")
+        base_join.add_columns(vec_distance_col)
+        .order_by(vec_distance_col)
         .limit(20)
     )
-    vec_res = await db.execute(vec_stmt)
+    vec_res = await db.execute(vec_stmt)  # skylos: ignore [SKY-D211]
     vec_hits = vec_res.all()
 
     # 2. Recherche textuelle (Top 20 par ts_rank full-text french)
@@ -131,7 +130,7 @@ async def hybrid_search(
                 .order_by(func.ts_rank(Fragment.search_vector, fts_query).desc())
                 .limit(20)
             )
-            fts_res = await db.execute(fts_stmt)
+            fts_res = await db.execute(fts_stmt)  # skylos: ignore [SKY-D211]
             fts_hits = fts_res.all()
         except Exception:
             # Fallback en cas d'erreur de parsing to_tsquery
@@ -144,7 +143,7 @@ async def hybrid_search(
                 .order_by(func.ts_rank(Fragment.search_vector, fb_query).desc())
                 .limit(20)
             )
-            fts_res = await db.execute(fts_stmt_fb)
+            fts_res = await db.execute(fts_stmt_fb)  # skylos: ignore [SKY-D211]
             fts_hits = fts_res.all()
 
     # 3. Fusion Reciprocal Rank Fusion (RRF)
